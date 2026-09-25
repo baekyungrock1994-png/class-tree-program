@@ -12,6 +12,7 @@ import {
   Sparkles,
   AlertCircle
 } from 'lucide-react';
+import { signInWithGoogle } from '../services/firebaseAuthService';
 
 export default function LoginModal({
   isOpen,
@@ -24,6 +25,7 @@ export default function LoginModal({
   const [passwordInput, setPasswordInput] = useState('');
   const [selectedRole, setSelectedRole] = useState(currentRole || 'teacher');
   const [errorMessage, setErrorMessage] = useState('');
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -86,6 +88,30 @@ export default function LoginModal({
     onClose();
   };
 
+  // 구글 계정으로 관리자 로그인
+  const handleGoogleLogin = async () => {
+    try {
+      setIsGoogleLoading(true);
+      setErrorMessage('');
+      const googleAdminUser = await signInWithGoogle();
+      if (googleAdminUser) {
+        onLoginSuccess(googleAdminUser, 'admin');
+        onClose();
+      }
+    } catch (err) {
+      console.error('구글 로그인 실패:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setErrorMessage('로그인 팝업창이 닫혔습니다.');
+      } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        setErrorMessage('Firebase 콘솔의 Authentication > Sign-in method에서 Google을 활성화해 주세요.');
+      } else {
+        setErrorMessage(`구글 로그인 실패: ${err.message || '인증에 실패했습니다.'}`);
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   // 원클릭 빠른 체험 로그인
   const handleQuickLogin = (roleType) => {
     setErrorMessage('');
@@ -100,27 +126,16 @@ export default function LoginModal({
       };
       onLoginSuccess(adminUser, 'admin');
       onClose();
-    } else if (roleType === 'teacher') {
+    } else {
       const teacherUser = users.find((u) => u.role === 'teacher' && u.status === 'active') || {
         id: 'usr-tch-1',
-        name: '김길동T',
-        username: 'teacher_kim',
+        name: '김선생님',
+        username: 'teacher',
         role: 'teacher',
-        detail: '5학년 1반 담임 / 과학과 부장',
+        detail: '담당 교사',
         status: 'active'
       };
       onLoginSuccess(teacherUser, 'teacher');
-      onClose();
-    } else {
-      const studentUser = users.find((u) => u.role === 'student' && u.status === 'active') || {
-        id: 'usr-std-1',
-        name: '배경록',
-        username: 'std_50101',
-        role: 'student',
-        detail: '5학년 1반 1번 (1조)',
-        status: 'active'
-      };
-      onLoginSuccess(studentUser, 'student');
       onClose();
     }
   };
@@ -159,6 +174,49 @@ export default function LoginModal({
           </div>
         )}
 
+        {/* 구글 계정 관리자 로그인 */}
+        <div className="login-google-section">
+          <button
+            type="button"
+            className="btn-google-login"
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
+          >
+            {isGoogleLoading ? (
+              <span className="google-spinner"></span>
+            ) : (
+              <svg className="google-svg-icon" width="18" height="18" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12s.45 3.84 1.25 5.42l4.03-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                />
+              </svg>
+            )}
+            <span className="google-btn-text">
+              {isGoogleLoading ? '구글 계정 연결 중...' : 'Google 계정으로 관리자 로그인'}
+            </span>
+          </button>
+          <p className="google-login-notice">
+            * 내 구글 계정으로 로그인 시 즉시 <strong>최고 관리자</strong> 권한이 부여됩니다.
+          </p>
+        </div>
+
+        <div className="login-divider">
+          <span>또는 아이디/비밀번호 로그인</span>
+        </div>
+
         {/* 로그인 폼 */}
         <form onSubmit={handleSubmit} className="login-form-body">
           <div className="form-group">
@@ -168,7 +226,7 @@ export default function LoginModal({
               <input
                 type="text"
                 className="login-input"
-                placeholder="아이디를 입력하세요 (예: teacher_kim)"
+                placeholder="아이디를 입력하세요 (예: teacher 또는 admin)"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 autoFocus
@@ -188,11 +246,11 @@ export default function LoginModal({
                 onChange={(e) => setPasswordInput(e.target.value)}
               />
             </div>
-            <span className="login-pw-hint">* 초기 비밀번호는 <code>1234</code> 입니다.</span>
+            <span className="login-pw-hint">* 기본 비밀번호는 <code>1234</code> 또는 <code>password123!</code> 입니다.</span>
           </div>
 
           <button type="submit" className="btn-login-submit mt-4">
-            <span>로그인하여 프로그램 접속</span>
+            <span>아이디로 접속</span>
             <ArrowRight size={16} />
           </button>
         </form>
@@ -200,37 +258,22 @@ export default function LoginModal({
         {/* 빠른 간편 체험 로그인 버튼들 */}
         <div className="login-quick-section">
           <div className="login-divider">
-            <span>또는 빠른 계정 접속</span>
+            <span>빠른 테스트 접속</span>
           </div>
 
-          <div className="quick-login-btn-grid">
+          <div className="quick-login-btn-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
             <button
               type="button"
               className="quick-login-tile teacher"
               onClick={() => handleQuickLogin('teacher')}
-              title="김길동 선생님 계정으로 즉시 접속"
+              title="선생님 계정으로 즉시 접속"
             >
               <div className="tile-icon-wrap teacher">
                 <GraduationCap size={16} />
               </div>
               <div className="tile-text-wrap">
-                <strong className="tile-name">김길동 선생님</strong>
-                <span className="tile-role">교사 모드</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="quick-login-tile student"
-              onClick={() => handleQuickLogin('student')}
-              title="배경록 학생 계정으로 즉시 접속"
-            >
-              <div className="tile-icon-wrap student">
-                <School size={16} />
-              </div>
-              <div className="tile-text-wrap">
-                <strong className="tile-name">배경록 학생</strong>
-                <span className="tile-role">학생 모드</span>
+                <strong className="tile-name">선생님</strong>
+                <span className="tile-role">교사 계정</span>
               </div>
             </button>
 
@@ -245,7 +288,7 @@ export default function LoginModal({
               </div>
               <div className="tile-text-wrap">
                 <strong className="tile-name">최고 관리자</strong>
-                <span className="tile-role">관리자 콘솔</span>
+                <span className="tile-role">관리자 계정</span>
               </div>
             </button>
           </div>

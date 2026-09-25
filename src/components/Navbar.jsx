@@ -47,30 +47,32 @@ export default function Navbar({
 
       {/* 우측 영역: 역할 전환 탭 + 로그인/로그아웃 버튼 */}
       <div className="nav-actions">
-        {/* 모드 전환 세그먼트 */}
-        <div className="role-pills" title="모드 전환">
-          <button 
-            type="button"
-            className={`role-pill ${currentRole === 'teacher' ? 'active teacher' : ''}`}
-            onClick={() => setCurrentRole('teacher')}
-          >
-            교사 모드
-          </button>
-          <button 
-            type="button"
-            className={`role-pill ${currentRole === 'student' ? 'active student' : ''}`}
-            onClick={() => setCurrentRole('student')}
-          >
-            학생 모드
-          </button>
-          <button 
-            type="button"
-            className={`role-pill ${currentRole === 'admin' ? 'active admin' : ''}`}
-            onClick={() => setCurrentRole('admin')}
-          >
-            관리자 콘솔
-          </button>
-        </div>
+        {/* 모드 전환 세그먼트 (오직 관리자로 로그인한 경우에만 노출) */}
+        {isLoggedIn && currentUser?.role === 'admin' && (
+          <div className="role-pills" title="관리자 전용 모드 전환">
+            <button 
+              type="button"
+              className={`role-pill ${currentRole === 'teacher' ? 'active teacher' : ''}`}
+              onClick={() => setCurrentRole('teacher')}
+            >
+              교사 모드
+            </button>
+            <button 
+              type="button"
+              className={`role-pill ${currentRole === 'student' ? 'active student' : ''}`}
+              onClick={() => setCurrentRole('student')}
+            >
+              학생 모드
+            </button>
+            <button 
+              type="button"
+              className={`role-pill ${currentRole === 'admin' ? 'active admin' : ''}`}
+              onClick={() => setCurrentRole('admin')}
+            >
+              관리자 콘솔
+            </button>
+          </div>
+        )}
 
         {/* 로그인 / 사용자 프로필 및 로그아웃 버튼 */}
         <div className="nav-auth-section">

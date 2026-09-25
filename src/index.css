@@ -7433,6 +7433,78 @@ button, input, select, textarea {
   margin-bottom: 14px;
 }
 
+/* 구글 관리자 로그인 버튼 */
+.login-google-section {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.btn-google-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  color: #1e293b;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-google-login:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.btn-google-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.google-svg-icon {
+  flex-shrink: 0;
+}
+
+.google-btn-text {
+  letter-spacing: -0.01em;
+}
+
+.google-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #4285F4;
+  border-radius: 50%;
+  animation: spinGoogle 0.7s linear infinite;
+}
+
+@keyframes spinGoogle {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.google-login-notice {
+  margin: 6px 0 0 0;
+  text-align: center;
+  font-size: 0.73rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.google-login-notice strong {
+  color: #4f46e5;
+}
+
 .login-form-body {
   display: flex;
   flex-direction: column;

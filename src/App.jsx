@@ -17,6 +17,7 @@ import StudentAdmin from './components/StudentAdmin';
 import LoginModal from './components/LoginModal';
 import TimerExpireCelebrationModal from './components/TimerExpireCelebrationModal';
 import { subscribeBoardPosts } from './services/firebaseService';
+import { logoutFirebase, onAuthListener } from './services/firebaseAuthService';
 import { 
   INITIAL_LESSON, 
   TEACHER_HIERARCHY,
@@ -206,6 +207,20 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Firebase Auth 인증 상태 감지 (구글 로그인 세션 연동)
+  useEffect(() => {
+    const unsubscribe = onAuthListener((googleUser) => {
+      if (googleUser) {
+        setIsLoggedIn(true);
+        setCurrentUser(googleUser);
+        setCurrentRole('admin');
+      }
+    });
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
 
   // Modals
   const [isStudentAdminOpen, setIsStudentAdminOpen] = useState(false);
@@ -777,7 +792,12 @@ export default function App() {
   };
 
   // 로그아웃 핸들러: 비로그인 웰컴 상태로 복귀
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutFirebase();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     setIsLoggedIn(false);
     setCurrentUser(null);
     setSelectedStudentClassroomId(null);
