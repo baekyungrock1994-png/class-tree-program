@@ -27,52 +27,7 @@ import {
 } from './data/mockData';
 import { ShieldCheck, ArrowLeft, School, BookOpen, Edit, CheckCircle, Radio, GitFork, Settings, LogIn } from 'lucide-react';
 
-const INITIAL_TEACHER_CHATS = {
-  'tch-2': [
-    {
-      id: 'msg-1',
-      senderId: 'tch-2',
-      senderName: '홍길동T',
-      text: '김 선생님, 5학년 과학 날씨 단원 흐름도 잘 보았습니다! 3차시 바람의 원리 실험은 어떻게 진행하실 계획인가요?',
-      time: '오전 10:15',
-      type: 'text'
-    },
-    {
-      id: 'msg-2',
-      senderId: 'tch-1',
-      senderName: '김길동T',
-      text: '홍 선생님 안녕하세요! 간이 풍향·풍속계 제작 후 운동장에서 직접 관찰해 보려고 합니다. 2반과 협동 수업으로 함께 진행해도 좋을 것 같아요!',
-      time: '오전 10:20',
-      type: 'text'
-    },
-    {
-      id: 'msg-3',
-      senderId: 'tch-2',
-      senderName: '홍길동T',
-      text: '좋습니다! 저희 반 학생들도 참여할 수 있도록 공동 보드로 함께 열어주시겠어요?',
-      time: '오전 10:22',
-      type: 'collab_request'
-    }
-  ],
-  'tch-3': [
-    {
-      id: 'msg-4',
-      senderId: 'tch-3',
-      senderName: '남길동T',
-      text: '김길동 선생님, 방과후 환경 동아리에서 5학년 과학 기후 위기 토의 보드 템플릿을 참고해도 괜찮을까요?',
-      time: '어제',
-      type: 'board_request'
-    },
-    {
-      id: 'msg-5',
-      senderId: 'tch-1',
-      senderName: '김길동T',
-      text: '네 남 선생님, 언제든 편하게 복제해서 쓰셔도 됩니다! 학생들 반응 좋았던 활동지도 보드에 올려두었습니다.',
-      time: '어제',
-      type: 'text'
-    }
-  ]
-};
+const INITIAL_TEACHER_CHATS = {};
 
 export default function App() {
   // Global States
@@ -159,19 +114,19 @@ export default function App() {
   const [activeTeacherId, setActiveTeacherId] = useState('tch-1');
   const currentTeacher = teachers.find((t) => t.id === activeTeacherId) || teachers[0];
 
-  const [currentClassroom, setCurrentClassroom] = useState(currentTeacher.classrooms[0]);
-  const [currentBoard, setCurrentBoard] = useState(currentTeacher.classrooms[0].boards[0]);
+  const [currentClassroom, setCurrentClassroom] = useState(currentTeacher?.classrooms?.[0] || null);
+  const [currentBoard, setCurrentBoard] = useState(currentTeacher?.classrooms?.[0]?.boards?.[0] || null);
 
   // 학생 모드에서 선택된 교실 ID (처음 접속 시 null -> 화면 중앙에 ClassTree 로고 및 텍스트 표시)
   const [selectedStudentClassroomId, setSelectedStudentClassroomId] = useState(null);
 
   // 모드 상태: 'guided' (교사 주도 모드) | 'canvas' (무한 캔버스 모드)
-  const [lessonMode, setLessonMode] = useState(currentTeacher.classrooms[0].boards[0].mode || 'guided');
+  const [lessonMode, setLessonMode] = useState(currentTeacher?.classrooms?.[0]?.boards?.[0]?.mode || 'guided');
 
   // 수업 내 데이터
-  const [nodes, setNodes] = useState(currentTeacher.classrooms[0].boards[0].nodes || []);
-  const [edges, setEdges] = useState(currentTeacher.classrooms[0].boards[0].edges || []);
-  const [posts, setPosts] = useState(currentTeacher.classrooms[0].boards[0].posts || []);
+  const [nodes, setNodes] = useState(currentTeacher?.classrooms?.[0]?.boards?.[0]?.nodes || []);
+  const [edges, setEdges] = useState(currentTeacher?.classrooms?.[0]?.boards?.[0]?.edges || []);
+  const [posts, setPosts] = useState(currentTeacher?.classrooms?.[0]?.boards?.[0]?.posts || []);
   const [students, setStudents] = useState(INITIAL_STUDENTS);
   const [changeRequests, setChangeRequests] = useState(INITIAL_CHANGE_REQUESTS);
 
@@ -238,7 +193,14 @@ export default function App() {
   const [editingBoard, setEditingBoard] = useState(null);
 
   // Current Logged-in Student
-  const [currentStudent, setCurrentStudent] = useState(INITIAL_STUDENTS[0]);
+  const [currentStudent, setCurrentStudent] = useState(INITIAL_STUDENTS[0] || {
+    id: 'std-1',
+    name: '학생',
+    studentNo: '1번',
+    className: '우리 반',
+    group: '1조',
+    status: 'active'
+  });
   const [newRequestedName, setNewRequestedName] = useState('');
   const [profileRequestSuccess, setProfileRequestSuccess] = useState(false);
 
@@ -246,30 +208,12 @@ export default function App() {
   const [studentClassrooms, setStudentClassrooms] = useState([
     {
       id: 'cls-101',
-      name: '5학년 1반 과학',
-      teacherName: '김길동T',
+      name: '우리 반 교실',
+      teacherName: '김선생님',
       teacherId: 'tch-1',
       grade: '5학년',
-      code: 'SCI-501',
-      boards: TEACHER_HIERARCHY[0].classrooms[0].boards
-    },
-    {
-      id: 'cls-102',
-      name: '방과후 환경·기후 동아리',
-      teacherName: '김길동T',
-      teacherId: 'tch-1',
-      grade: '동아리',
-      code: 'ENV-702',
-      boards: TEACHER_HIERARCHY[0].classrooms[1].boards
-    },
-    {
-      id: 'cls-201',
-      name: '5학년 2반 과학',
-      teacherName: '홍길동T',
-      teacherId: 'tch-2',
-      grade: '5학년',
-      code: 'SCI-502',
-      boards: TEACHER_HIERARCHY[1].classrooms[0].boards
+      code: 'CLS-501',
+      boards: TEACHER_HIERARCHY[0]?.classrooms?.[0]?.boards || []
     }
   ]);
 
