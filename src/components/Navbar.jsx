@@ -6,7 +6,8 @@ import {
   User, 
   GraduationCap, 
   School, 
-  ShieldCheck 
+  ShieldCheck,
+  UserPlus
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -18,6 +19,7 @@ export default function Navbar({
   isLoggedIn = false,
   currentUser = null,
   onOpenLogin,
+  onOpenRegister,
   onLogout,
   onGoHome
 }) {
@@ -74,18 +76,29 @@ export default function Navbar({
           </div>
         )}
 
-        {/* 로그인 / 사용자 프로필 및 로그아웃 버튼 */}
+        {/* 로그인 / 회원가입 / 사용자 프로필 및 로그아웃 버튼 */}
         <div className="nav-auth-section">
           {!isLoggedIn ? (
-            <button 
-              type="button" 
-              className="btn-nav-login"
-              onClick={onOpenLogin}
-              title="ClassTree 로그인하여 프로그램 접속하기"
-            >
-              <LogIn size={15} />
-              <span>로그인</span>
-            </button>
+            <div className="nav-auth-guest-group">
+              <button 
+                type="button" 
+                className="btn-nav-register"
+                onClick={onOpenRegister}
+                title="ClassTree 교사 또는 학생 회원가입 신청"
+              >
+                <UserPlus size={14} />
+                <span>회원가입</span>
+              </button>
+              <button 
+                type="button" 
+                className="btn-nav-login"
+                onClick={onOpenLogin}
+                title="ClassTree 로그인하여 프로그램 접속하기"
+              >
+                <LogIn size={14} />
+                <span>로그인</span>
+              </button>
+            </div>
           ) : (
             <div className="nav-user-profile-wrap">
               <div className="nav-user-chip" title={`${currentUser?.detail || ''}`}>

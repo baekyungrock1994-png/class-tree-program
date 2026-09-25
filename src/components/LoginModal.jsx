@@ -19,7 +19,8 @@ export default function LoginModal({
   onClose,
   users = [],
   onLoginSuccess,
-  currentRole
+  currentRole,
+  onOpenRegister
 }) {
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -121,10 +122,22 @@ export default function LoginModal({
         name: '최고 관리자',
         username: 'admin',
         role: 'admin',
-        detail: '시스템 총괄 관리자',
+        detail: '시스템 총괄 관리자 (체험용)',
         status: 'active'
       };
       onLoginSuccess(adminUser, 'admin');
+      onClose();
+    } else if (roleType === 'student') {
+      const studentUser = {
+        id: 'usr-std-sample',
+        name: '학생',
+        studentNo: '50101',
+        username: 'sample_student',
+        role: 'student',
+        detail: '5학년 1반 1번 (체험용 학생)',
+        status: 'active'
+      };
+      onLoginSuccess(studentUser, 'student');
       onClose();
     } else {
       const teacherUser = users.find((u) => u.role === 'teacher' && u.status === 'active') || {
@@ -132,7 +145,7 @@ export default function LoginModal({
         name: '김선생님',
         username: 'teacher',
         role: 'teacher',
-        detail: '담당 교사',
+        detail: '담당 교사 (체험용 샘플)',
         status: 'active'
       };
       onLoginSuccess(teacherUser, 'teacher');
@@ -258,22 +271,37 @@ export default function LoginModal({
         {/* 빠른 간편 체험 로그인 버튼들 */}
         <div className="login-quick-section">
           <div className="login-divider">
-            <span>빠른 테스트 접속</span>
+            <span>빠른 테스트 접속 (체험용 샘플)</span>
           </div>
 
-          <div className="quick-login-btn-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          <div className="quick-login-btn-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             <button
               type="button"
               className="quick-login-tile teacher"
               onClick={() => handleQuickLogin('teacher')}
-              title="선생님 계정으로 즉시 접속"
+              title="김선생님 샘플 계정으로 즉시 접속"
             >
               <div className="tile-icon-wrap teacher">
-                <GraduationCap size={16} />
+                <GraduationCap size={15} />
               </div>
               <div className="tile-text-wrap">
-                <strong className="tile-name">선생님</strong>
-                <span className="tile-role">교사 계정</span>
+                <strong className="tile-name">김선생님</strong>
+                <span className="tile-role">샘플 교사</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="quick-login-tile student"
+              onClick={() => handleQuickLogin('student')}
+              title="체험용 학생 계정으로 즉시 접속"
+            >
+              <div className="tile-icon-wrap student">
+                <School size={15} />
+              </div>
+              <div className="tile-text-wrap">
+                <strong className="tile-name">학생</strong>
+                <span className="tile-role">체험 학생</span>
               </div>
             </button>
 
@@ -284,14 +312,29 @@ export default function LoginModal({
               title="최고 관리자 계정으로 즉시 접속"
             >
               <div className="tile-icon-wrap admin">
-                <ShieldCheck size={16} />
+                <ShieldCheck size={15} />
               </div>
               <div className="tile-text-wrap">
-                <strong className="tile-name">최고 관리자</strong>
-                <span className="tile-role">관리자 계정</span>
+                <strong className="tile-name">관리자</strong>
+                <span className="tile-role">관리자 콘솔</span>
               </div>
             </button>
           </div>
+        </div>
+
+        {/* 회원가입 링크 */}
+        <div className="login-register-footer">
+          <span>아직 계정이 없으신가요?</span>
+          <button
+            type="button"
+            className="btn-switch-register"
+            onClick={() => {
+              onClose();
+              if (onOpenRegister) onOpenRegister();
+            }}
+          >
+            회원가입 신청하기
+          </button>
         </div>
       </div>
     </div>

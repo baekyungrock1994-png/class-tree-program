@@ -69,38 +69,48 @@ export default function TeacherSidebar({
                 );
               })
             ) : (
-              /* 교사 모드: 선생님 목록 (# 김길동T, # 홍길동T, # 남길동T) */
-              teachers.map((t) => {
-                const isActive = t.id === activeTeacherId;
+            /* 교사 모드: 선생님 목록 (# 김선생님(샘플) 및 새로 추가될 교사 구분) */
+            teachers.map((t) => {
+              const isActive = t.id === activeTeacherId;
+              const isSample = t.isSample || t.id === 'tch-1' || t.name === '김선생님';
 
-                return (
-                  <div
-                    key={t.id}
-                    className={`teacher-item ${isActive ? 'active' : ''}`}
-                    onClick={() => onSelectTeacher && onSelectTeacher(t.id)}
-                    title={`${t.name} (${t.role || '교사'})의 학급 및 수업 목록 보기`}
-                  >
-                    <div className="teacher-item-left">
-                      <span className="teacher-hash">#</span>
-                      <span className="teacher-name">{t.name}</span>
-                    </div>
-
-                    {/* 점3개 자리에 배치된 말풍선 채팅 버튼 */}
-                    <button 
-                      type="button"
-                      className="teacher-item-chat-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onOpenTeacherChat) onOpenTeacherChat(t);
-                      }}
-                      aria-label={`${t.name} 선생님과 협업 채팅`}
-                      title={`${t.name} 선생님과 협업 채팅`}
-                    >
-                      <MessageSquare size={16} />
-                    </button>
+              return (
+                <div
+                  key={t.id}
+                  className={`teacher-item ${isActive ? 'active' : ''} ${isSample ? 'teacher-item-sample' : 'teacher-item-real'}`}
+                  onClick={() => onSelectTeacher && onSelectTeacher(t.id)}
+                  title={isSample ? '기본 체험용 샘플 데이터 (김선생님)' : `${t.name} 선생님의 정식 학급 및 수업 보드`}
+                >
+                  <div className="teacher-item-left">
+                    <span className="teacher-hash">#</span>
+                    <span className="teacher-name">{t.name}</span>
+                    {isSample ? (
+                      <span className="teacher-type-pill sample" title="기본 체험용 샘플 데이터">
+                        샘플
+                      </span>
+                    ) : (
+                      <span className="teacher-type-pill real" title="정식 가입 승인 교사">
+                        정식
+                      </span>
+                    )}
                   </div>
-                );
-              })
+
+                  {/* 점3개 자리에 배치된 말풍선 채팅 버튼 */}
+                  <button 
+                    type="button"
+                    className="teacher-item-chat-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onOpenTeacherChat) onOpenTeacherChat(t);
+                    }}
+                    aria-label={`${t.name} 선생님과 협업 채팅`}
+                    title={`${t.name} 선생님과 협업 채팅`}
+                  >
+                    <MessageSquare size={16} />
+                  </button>
+                </div>
+              );
+            })
             )}
           </div>
 

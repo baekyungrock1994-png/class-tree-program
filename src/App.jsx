@@ -15,6 +15,7 @@ import EditClassroomModal from './components/EditClassroomModal';
 import EditBoardModal from './components/EditBoardModal';
 import StudentAdmin from './components/StudentAdmin';
 import LoginModal from './components/LoginModal';
+import RegisterModal from './components/RegisterModal';
 import TimerExpireCelebrationModal from './components/TimerExpireCelebrationModal';
 import { subscribeBoardPosts } from './services/firebaseService';
 import { logoutFirebase, onAuthListener } from './services/firebaseAuthService';
@@ -32,7 +33,22 @@ const INITIAL_TEACHER_CHATS = {};
 export default function App() {
   // Global States
   const [currentRole, setCurrentRole] = useState('teacher'); // 'teacher' | 'student' | 'admin'
-  const [teachers, setTeachers] = useState(TEACHER_HIERARCHY);
+  const [teachers, setTeachers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('classtree_teachers');
+      return saved ? JSON.parse(saved) : TEACHER_HIERARCHY;
+    } catch {
+      return TEACHER_HIERARCHY;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('classtree_teachers', JSON.stringify(teachers));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [teachers]);
 
   // 교사 1:1 협업 메신저 상태
   const [activeChatTeacher, setActiveChatTeacher] = useState(null);
@@ -108,7 +124,22 @@ export default function App() {
   const loggedInTeacherId = 'tch-1';
 
   // 관리자 콘솔용 전체 가입 사용자 (교사 & 학생) 상태
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('classtree_users');
+      return saved ? JSON.parse(saved) : INITIAL_USERS;
+    } catch {
+      return INITIAL_USERS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('classtree_users', JSON.stringify(users));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [users]);
 
   // 현재 선택된 계층 객체들
   const [activeTeacherId, setActiveTeacherId] = useState('tch-1');
@@ -162,6 +193,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
   // Firebase Auth 인증 상태 감지 (구글 로그인 세션 연동)
   useEffect(() => {
@@ -991,6 +1023,7 @@ export default function App() {
         isLoggedIn={isLoggedIn}
         currentUser={currentUser}
         onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenRegister={() => setIsRegisterModalOpen(true)}
         onLogout={handleLogout}
         onGoHome={handleGoHome}
       />
@@ -1451,6 +1484,18 @@ export default function App() {
         users={users}
         onLoginSuccess={handleLoginSuccess}
         currentRole={currentRole}
+        onOpenRegister={() => setIsRegisterModalOpen(true)}
+      />
+
+      {/* 회원가입 신청 모달 */}
+      <RegisterModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        users={users}
+        onRegisterSubmit={(newUser) => {
+          setUsers((prev) => [newUser, ...prev]);
+        }}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
       />
 
       {/* 타이머 종료 화려한 폭죽 & 시선 집중 모달 */}
