@@ -21,6 +21,13 @@ import {
   GripVertical
 } from 'lucide-react';
 import DrawingModal from './DrawingModal';
+import { 
+  savePostToFirestore, 
+  deletePostFromFirestore, 
+  addCommentToFirestore, 
+  toggleLikeInFirestore, 
+  uploadImageFile 
+} from '../services/firebaseService';
 
 export default function PadletBoard({
   currentNode,
@@ -255,6 +262,7 @@ export default function PadletBoard({
     };
 
     setPosts([newPost, ...posts]);
+    savePostToFirestore(newPost); // Firebase Firestore 실시간 저장
     setNewTitle('');
     setNewContent('');
     setNewImageUrl('');
@@ -265,6 +273,10 @@ export default function PadletBoard({
   // 좋아요 토글
   const handleToggleLike = (postId) => {
     const studentId = currentStudent?.id || 'guest';
+    const targetPost = posts.find((p) => p.id === postId);
+    if (targetPost) {
+      toggleLikeInFirestore(postId, studentId, targetPost.likes || 0, targetPost.likedBy || []);
+    }
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id !== postId) return p;
@@ -290,6 +302,11 @@ export default function PadletBoard({
       timeAgo: '방금'
     };
 
+    const targetPost = posts.find((p) => p.id === postId);
+    if (targetPost) {
+      addCommentToFirestore(postId, newComment, targetPost.comments || []);
+    }
+
     setPosts((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, comments: [...p.comments, newComment] } : p))
     );
@@ -304,6 +321,7 @@ export default function PadletBoard({
       return;
     }
     if (window.confirm('이 활동 카드를 삭제하시겠습니까?')) {
+      deletePostFromFirestore(postId); // Firebase Firestore 삭제
       setPosts(posts.filter((p) => p.id !== postId));
       if (viewingPost && viewingPost.id === postId) {
         setViewingPost(null);
@@ -345,6 +363,11 @@ export default function PadletBoard({
           : p
       )
     );
+
+    const targetPost = posts.find((p) => p.id === postId);
+    if (targetPost) {
+      savePostToFirestore({ ...targetPost, title: trimmedTitle, content: trimmedContent });
+    }
 
     if (viewingPost && viewingPost.id === postId) {
       setViewingPost((prev) => ({
@@ -388,6 +411,8 @@ export default function PadletBoard({
       )
     );
 
+    savePostToFirestore({ ...editingPost, title: trimmedTitle, content: trimmedContent });
+
     if (viewingPost && viewingPost.id === editingPost.id) {
       setViewingPost((prev) => ({
         ...prev,
@@ -399,15 +424,26 @@ export default function PadletBoard({
     setEditingPost(null);
   };
 
-  // 사진 업로드 시뮬레이션
-  const handleImageFileChange = (e) => {
+  // 사진 업로드 (Base64 로컬 즉시 표시 + Firebase Storage 클라우드 업로드)
+  const handleImageFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // 1. 빠른 미리보기를 위해 먼저 Base64 로드
       const reader = new FileReader();
       reader.onload = (event) => {
         setNewImageUrl(event.target.result);
       };
       reader.readAsDataURL(file);
+
+      // 2. Firebase Storage 업로드 시도 (성공 시 고해상도 Cloud URL로 대체)
+      try {
+        const cloudUrl = await uploadImageFile(file);
+        if (cloudUrl) {
+          setNewImageUrl(cloudUrl);
+        }
+      } catch (err) {
+        console.warn('Storage 업로드 건너뜀 (Base64 사용):', err);
+      }
     }
   };
 

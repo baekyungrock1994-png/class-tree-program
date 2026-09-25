@@ -16,6 +16,7 @@ import EditBoardModal from './components/EditBoardModal';
 import StudentAdmin from './components/StudentAdmin';
 import LoginModal from './components/LoginModal';
 import TimerExpireCelebrationModal from './components/TimerExpireCelebrationModal';
+import { subscribeBoardPosts } from './services/firebaseService';
 import { 
   INITIAL_LESSON, 
   TEACHER_HIERARCHY,
@@ -172,6 +173,25 @@ export default function App() {
   const [posts, setPosts] = useState(currentTeacher.classrooms[0].boards[0].posts || []);
   const [students, setStudents] = useState(INITIAL_STUDENTS);
   const [changeRequests, setChangeRequests] = useState(INITIAL_CHANGE_REQUESTS);
+
+  // Firebase Firestore 실시간 카드(포스트) 구독
+  useEffect(() => {
+    const unsubscribe = subscribeBoardPosts(
+      null,
+      (firestorePosts) => {
+        if (firestorePosts && firestorePosts.length > 0) {
+          setPosts(firestorePosts);
+        }
+      },
+      () => {
+        // Firebase 준비 중이거나 오프라인 시 조용히 로컬 상태 유지
+      }
+    );
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [currentBoard?.id]);
 
   // 캔버스 확장 여부 (교사 주도 모드에서 첫 화면에는 흐름도만 표시)
   const [canvasExpanded, setCanvasExpanded] = useState(false);
