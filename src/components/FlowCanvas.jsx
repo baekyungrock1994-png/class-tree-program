@@ -26,6 +26,7 @@ import {
   Clock,
   Film
 } from 'lucide-react';
+import { compressImage } from '../utils/imageCompressor';
 
 // =========================================================================
 // Tarjan의 SCC(Strongly Connected Components) 알고리즘으로 사이클 검출
@@ -769,10 +770,27 @@ export default function FlowCanvas({
     setEditingNode(null);
   };
 
-  // 이미지 파일 업로드 (Base64 변환)
-  const handleImageFileChange = (e, isEdit) => {
+  // 이미지 파일 업로드 (무료 Firestore 직접 저장을 위한 초경량 자동 압축)
+  const handleImageFileChange = async (e, isEdit) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    try {
+      const compressed = await compressImage(file, 900, 900, 0.75);
+      if (compressed) {
+        if (isEdit) {
+          setEditImageUrl(compressed);
+          setEditMediaTypeTab('image');
+        } else {
+          setNewNodeImageUrl(compressed);
+          setNewNodeMediaTypeTab('image');
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn('이미지 압축 오류 (기본 로드 대체):', err);
+    }
+
     const reader = new FileReader();
     reader.onload = (uploadEvent) => {
       const base64 = uploadEvent.target?.result;

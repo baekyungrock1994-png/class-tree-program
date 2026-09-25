@@ -25,9 +25,9 @@ import {
   savePostToFirestore, 
   deletePostFromFirestore, 
   addCommentToFirestore, 
-  toggleLikeInFirestore, 
-  uploadImageFile 
+  toggleLikeInFirestore 
 } from '../services/firebaseService';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function PadletBoard({
   currentNode,
@@ -424,25 +424,22 @@ export default function PadletBoard({
     setEditingPost(null);
   };
 
-  // 사진 업로드 (Base64 로컬 즉시 표시 + Firebase Storage 클라우드 업로드)
+  // 사진 파일 선택 (클라이언트 초경량 자동 압축 ➡️ 무료 Firestore 직접 저장, 유료 Storage 불필요!)
   const handleImageFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // 1. 빠른 미리보기를 위해 먼저 Base64 로드
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setNewImageUrl(event.target.result);
-      };
-      reader.readAsDataURL(file);
-
-      // 2. Firebase Storage 업로드 시도 (성공 시 고해상도 Cloud URL로 대체)
       try {
-        const cloudUrl = await uploadImageFile(file);
-        if (cloudUrl) {
-          setNewImageUrl(cloudUrl);
+        const compressedDataUrl = await compressImage(file, 900, 900, 0.75);
+        if (compressedDataUrl) {
+          setNewImageUrl(compressedDataUrl);
         }
       } catch (err) {
-        console.warn('Storage 업로드 건너뜀 (Base64 사용):', err);
+        console.warn('이미지 압축 중 오류 발생 (기본 로드 대체):', err);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setNewImageUrl(event.target.result);
+        };
+        reader.readAsDataURL(file);
       }
     }
   };
