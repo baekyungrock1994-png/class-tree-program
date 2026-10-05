@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   GitFork, 
   X, 
@@ -27,20 +27,32 @@ export default function RegisterModal({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [school, setSchool] = useState('');
   
-  // 교사용 필드
-  const [subject, setSubject] = useState('');
-  const [teacherGrade, setTeacherGrade] = useState('5학년');
-
-  // 학생용 필드
-  const [studentGrade, setStudentGrade] = useState('5');
+  // 학생용 필드: 학교 급별 선택 ('초등학교', '중학교', '고등학교')
+  const [schoolType, setSchoolType] = useState('초등학교'); // '초등학교' | '중학교' | '고등학교'
+  const [studentGrade, setStudentGrade] = useState('1');
   const [studentClass, setStudentClass] = useState('1');
-  const [studentNumber, setStudentNumber] = useState('1');
 
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [registeredUserInfo, setRegisteredUserInfo] = useState(null);
+
+  // 학교 구분에 따른 선택 가능한 학년 목록 계산
+  const availableGrades = useMemo(() => {
+    if (schoolType === '초등학교') {
+      return ['1', '2', '3', '4', '5', '6'];
+    }
+    return ['1', '2', '3']; // 중학교, 고등학교는 1~3학년
+  }, [schoolType]);
+
+  // 학교 구분 변경 시 현재 학년이 유효하지 않으면 1학년으로 자동 조정
+  const handleSchoolTypeChange = (newType) => {
+    setSchoolType(newType);
+    const maxGrade = newType === '초등학교' ? 6 : 3;
+    if (Number(studentGrade) > maxGrade) {
+      setStudentGrade('1');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -58,9 +70,8 @@ export default function RegisterModal({
     const cleanUsername = username.trim().toLowerCase();
     const cleanPw = password.trim();
     const cleanPwConfirm = passwordConfirm.trim();
-    const cleanSchool = school.trim();
 
-    // 1. 유효성 검사
+    // 1. 공통 유효성 검사 (이름, 아이디, 비밀번호)
     if (!cleanName || !cleanUsername || !cleanPw || !cleanPwConfirm) {
       setErrorMessage('필수 항목(이름, 아이디, 비밀번호)을 모두 입력해 주세요.');
       return;
@@ -90,22 +101,6 @@ export default function RegisterModal({
       return;
     }
 
-    if (role === 'teacher') {
-      if (!cleanSchool) {
-        setErrorMessage('소속 학교명을 입력해 주세요.');
-        return;
-      }
-    } else {
-      if (!cleanSchool) {
-        setErrorMessage('소속 학교명을 입력해 주세요.');
-        return;
-      }
-      if (!studentNumber) {
-        setErrorMessage('학생 번호를 입력해 주세요.');
-        return;
-      }
-    }
-
     // 2. 신규 사용자 객체 생성 (승인 대기 상태: pending)
     const newId = `usr-${Date.now()}`;
     const refId = role === 'teacher' 
@@ -119,16 +114,16 @@ export default function RegisterModal({
       username: cleanUsername,
       password: cleanPw,
       role,
-      school: cleanSchool,
-      grade: role === 'teacher' ? teacherGrade : Number(studentGrade),
-      classNum: role === 'student' ? Number(studentClass) : undefined,
+      schoolLevel: role === 'student' ? schoolType : undefined,
+      school: role === 'student' ? schoolType : undefined,
+      grade: role === 'student' ? Number(studentGrade) : undefined,
+      classNum: role === 'student' ? (Number(studentClass) || 1) : undefined,
       studentNo: role === 'student' 
-        ? `${studentGrade}0${studentClass}${String(studentNumber).padStart(2, '0')}`
+        ? `${studentGrade}0${studentClass || 1}99`
         : undefined,
-      subject: role === 'teacher' ? (subject.trim() || '일반 교과') : undefined,
       detail: role === 'teacher'
-        ? `${cleanSchool} (${teacherGrade} ${subject.trim() || '담당'})`
-        : `${cleanSchool} ${studentGrade}학년 ${studentClass}반 ${studentNumber}번`,
+        ? '교사'
+        : `${schoolType} ${studentGrade}학년 ${studentClass || 1}반`,
       email: `${cleanUsername}@school.edu`,
       joinedDate: new Date().toISOString().split('T')[0],
       status: 'pending' // 승인 대기
@@ -319,95 +314,60 @@ export default function RegisterModal({
                 </div>
               </div>
 
-              {/* 소속 학교 */}
-              <div className="form-group mt-2">
-                <label className="login-field-label">소속 학교</label>
-                <div className="login-input-wrap">
-                  <Building size={15} className="login-input-icon" />
-                  <input
-                    type="text"
-                    className="login-input"
-                    placeholder="예: 서울초등학교"
-                    value={school}
-                    onChange={(e) => setSchool(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* 교사 추가 필드 */}
-              {role === 'teacher' && (
-                <div className="form-row-grid mt-2">
+              {/* 학생 추가 필드: 학교 급(초/중/고) & 학년 & 반 */}
+              {role === 'student' && (
+                <div className="student-register-fields mt-3">
+                  {/* 학교 급 설정: 초등학교 / 중학교 / 고등학교 */}
                   <div className="form-group">
-                    <label className="login-field-label">담당 학년</label>
-                    <select 
-                      className="register-select"
-                      value={teacherGrade}
-                      onChange={(e) => setTeacherGrade(e.target.value)}
-                    >
-                      <option value="3학년">3학년</option>
-                      <option value="4학년">4학년</option>
-                      <option value="5학년">5학년</option>
-                      <option value="6학년">6학년</option>
-                      <option value="전학년">전학년/전담</option>
-                    </select>
-                  </div>
-
-                  <div className="form-group">
-                    <label className="login-field-label">담당 과목 / 보직</label>
-                    <div className="login-input-wrap">
-                      <BookOpen size={15} className="login-input-icon" />
-                      <input
-                        type="text"
-                        className="login-input"
-                        placeholder="예: 과학, 담임"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                      />
+                    <label className="login-field-label">학교 구분</label>
+                    <div className="school-type-toggle-group">
+                      {['초등학교', '중학교', '고등학교'].map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          className={`school-type-pill-btn ${schoolType === type ? 'active' : ''}`}
+                          onClick={() => handleSchoolTypeChange(type)}
+                        >
+                          <School size={14} />
+                          <span>{type}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* 학생 추가 필드: 학년 / 반 / 번호 */}
-              {role === 'student' && (
-                <div className="form-row-grid-3 mt-2">
-                  <div className="form-group">
-                    <label className="login-field-label">학년</label>
-                    <select 
-                      className="register-select"
-                      value={studentGrade}
-                      onChange={(e) => setStudentGrade(e.target.value)}
-                    >
-                      <option value="3">3학년</option>
-                      <option value="4">4학년</option>
-                      <option value="5">5학년</option>
-                      <option value="6">6학년</option>
-                    </select>
-                  </div>
+                  <div className="form-row-grid mt-2">
+                    {/* 선택된 학교 구분에 따른 동적 학년 선택 */}
+                    <div className="form-group">
+                      <label className="login-field-label">학년 선택 ({schoolType})</label>
+                      <select 
+                        className="register-select"
+                        value={studentGrade}
+                        onChange={(e) => setStudentGrade(e.target.value)}
+                      >
+                        {availableGrades.map((g) => (
+                          <option key={g} value={g}>
+                            {g}학년
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                  <div className="form-group">
-                    <label className="login-field-label">반</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="20"
-                      className="register-number-input"
-                      value={studentClass}
-                      onChange={(e) => setStudentClass(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="login-field-label">번호</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="50"
-                      className="register-number-input"
-                      value={studentNumber}
-                      onChange={(e) => setStudentNumber(e.target.value)}
-                    />
+                    {/* 반 선택 */}
+                    <div className="form-group">
+                      <label className="login-field-label">반</label>
+                      <div className="login-input-wrap">
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          className="login-input"
+                          placeholder="반 입력 (예: 1)"
+                          value={studentClass}
+                          onChange={(e) => setStudentClass(e.target.value)}
+                        />
+                        <span style={{ fontSize: '13px', color: '#64748b', marginRight: '8px' }}>반</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

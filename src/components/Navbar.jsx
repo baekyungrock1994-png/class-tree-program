@@ -21,7 +21,8 @@ export default function Navbar({
   onOpenLogin,
   onOpenRegister,
   onLogout,
-  onGoHome
+  onGoHome,
+  pendingCount = 0
 }) {
   return (
     <header className="navbar">
@@ -70,8 +71,14 @@ export default function Navbar({
               type="button"
               className={`role-pill ${currentRole === 'admin' ? 'active admin' : ''}`}
               onClick={() => setCurrentRole('admin')}
+              style={{ position: 'relative' }}
             >
               관리자 콘솔
+              {pendingCount > 0 && (
+                <span className="nav-pending-badge" title={`가입 승인 대기 ${pendingCount}건`}>
+                  {pendingCount}
+                </span>
+              )}
             </button>
           </div>
         )}

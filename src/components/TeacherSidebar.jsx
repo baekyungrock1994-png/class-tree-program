@@ -83,7 +83,7 @@ export default function TeacherSidebar({
                 >
                   <div className="teacher-item-left">
                     <span className="teacher-hash">#</span>
-                    <span className="teacher-name">{t.name}</span>
+                    <span className="teacher-name" title={`${t.name} 선생님`}>{t.name}</span>
                     {isSample ? (
                       <span className="teacher-type-pill sample" title="기본 체험용 샘플 데이터">
                         샘플

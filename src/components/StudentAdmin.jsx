@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   UserCheck, 
   KeyRound, 
@@ -28,6 +28,11 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
+import { 
+  updateUserInFirestore, 
+  deleteUserFromFirestore, 
+  saveUserToFirestore 
+} from '../services/firebaseService';
 
 export default function StudentAdmin({
   isOpen,
@@ -89,6 +94,13 @@ export default function StudentAdmin({
   const pendingUsers = users.filter((u) => u.status === 'pending');
   const rejectedUsers = users.filter((u) => u.status === 'rejected');
 
+  // 관리자 콘솔 모달이 열릴 때 가입 대기 신청이 있다면 'pending' 탭을 자동으로 보여줌
+  useEffect(() => {
+    if (isOpen && pendingUsers.length > 0) {
+      setActiveTab('pending');
+    }
+  }, [isOpen, pendingUsers.length]);
+
   // =========================================================================
   // 1. 회원가입 승인 & 반려 기능
   // =========================================================================
@@ -98,6 +110,8 @@ export default function StudentAdmin({
     setUsers((prev) =>
       prev.map((u) => (u.id === user.id ? { ...u, status: 'active', joinedDate: '오늘 승인됨' } : u))
     );
+    // Firestore에도 영구 반영
+    updateUserInFirestore(user.id, { status: 'active', joinedDate: '오늘 승인됨' });
 
     // 2) 교사면 teachers 목록에 등록
     if (user.role === 'teacher') {
@@ -160,6 +174,7 @@ export default function StudentAdmin({
           : u
       )
     );
+    updateUserInFirestore(rejectingUser.id, { status: 'rejected', rejectedReason: reason });
 
     showToast(`[${rejectingUser.name}] 님의 가입 신청을 반려했습니다. (사유: ${reason})`);
     setRejectingUser(null);
@@ -176,6 +191,7 @@ export default function StudentAdmin({
   // 1-4. 반려된 사용자 재승인
   const handleReApproveUser = (user) => {
     handleApproveUser(user);
+    updateUserInFirestore(user.id, { status: 'active', joinedDate: '재승인 완료' });
     showToast(`반려되었던 [${user.name}] 님의 계정을 재승인하였습니다.`);
   };
 
@@ -191,7 +207,7 @@ export default function StudentAdmin({
           password: 'password123!',
           role: 'teacher',
           email: `park${randomId}@school.edu`,
-          detail: '영어과 전담 교사 (신규 가입 신청)',
+          detail: '교사 (신규 가입 신청)',
           joinedDate: '방금 전',
           status: 'pending',
           requestReason: '스마트 영어 교실 수업 개설 및 학생 협동 학습용'
@@ -202,17 +218,19 @@ export default function StudentAdmin({
           username: `std_501${randomId.slice(-2)}`,
           password: 'password123!',
           role: 'student',
+          schoolLevel: '초등학교',
           grade: 5,
           classNum: 1,
           studentNo: `501${randomId.slice(-2)}`,
           email: `std501${randomId.slice(-2)}@school.edu`,
-          detail: '5학년 1반 (신규 스마트기기 가입)',
+          detail: '초등학교 5학년 1반',
           joinedDate: '방금 전',
           status: 'pending',
           requestReason: '과학 탐구 프로젝트 수업 참가용 가입 신청'
         };
 
     setUsers((prev) => [fakeUser, ...prev]);
+    saveUserToFirestore(fakeUser);
     showToast(`테스트 가입 신청이 접수되었습니다: [${fakeUser.name} (${isTch ? '교사' : '학생'})]`);
   };
 
@@ -225,6 +243,7 @@ export default function StudentAdmin({
         u.id === user.id ? { ...u, password: 'password123!' } : u
       )
     );
+    updateUserInFirestore(user.id, { password: 'password123!' });
     showToast(`[${user.name} (${user.username})] 계정의 비밀번호가 기본값 '1234'로 즉시 초기화되었습니다.`);
   };
 
@@ -237,6 +256,7 @@ export default function StudentAdmin({
         u.id === pwTargetUser.id ? { ...u, password: customPasswordInput.trim() } : u
       )
     );
+    updateUserInFirestore(pwTargetUser.id, { password: customPasswordInput.trim() });
     showToast(`[${pwTargetUser.name}] 님의 비밀번호가 성공적으로 변경되었습니다.`);
     setPwTargetUser(null);
     setCustomPasswordInput('');
@@ -254,6 +274,7 @@ export default function StudentAdmin({
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, username: trimmed } : u))
     );
+    updateUserInFirestore(userId, { username: trimmed });
     setEditingUserId(null);
     showToast(`계정 아이디가 '${trimmed}'(으)로 변경되었습니다.`);
   };
@@ -309,6 +330,7 @@ export default function StudentAdmin({
   const handleDeleteUser = (userId, userName) => {
     if (!window.confirm(`정말 [${userName}] 사용자를 삭제(탈퇴) 처리하시겠습니까?`)) return;
     setUsers((prev) => prev.filter((u) => u.id !== userId));
+    deleteUserFromFirestore(userId);
     showToast(`[${userName}] 계정이 정상적으로 삭제되었습니다.`);
   };
 
@@ -331,12 +353,13 @@ export default function StudentAdmin({
       classNum: newUserRole === 'student' ? Number(newUserClassNum) : undefined,
       studentNo: newUserRole === 'student' ? `${newUserGrade}0${newUserClassNum}99` : undefined,
       email: `${newUserUsername.trim()}@school.edu`,
-      detail: newUserDetail.trim() || (newUserRole === 'teacher' ? '신임 교사' : `${newUserGrade}학년 ${newUserClassNum}반 신입생`),
+      detail: newUserDetail.trim() || (newUserRole === 'teacher' ? '교사' : `${newUserGrade}학년 ${newUserClassNum}반 신입생`),
       joinedDate: '오늘 등록',
       status: 'active'
     };
 
     setUsers((prev) => [newUser, ...prev]);
+    saveUserToFirestore(newUser);
 
     if (newUserRole === 'teacher') {
       const teacherId = `tch-${Date.now().toString().slice(-4)}`;
@@ -630,14 +653,14 @@ export default function StudentAdmin({
                         <div className="pending-meta-box">
                           {isTch ? (
                             <div className="pending-meta-item">
-                              <span className="meta-label">담당 정보:</span>
-                              <span className="meta-value">{user.detail || '과목 교사 신청'}</span>
+                              <span className="meta-label">신청 구분:</span>
+                              <span className="meta-value">👨‍🏫 교사 회원 신청</span>
                             </div>
                           ) : (
                             <div className="pending-meta-item">
-                              <span className="meta-label">희망 학년/반:</span>
+                              <span className="meta-label">학교 / 학년·반:</span>
                               <span className="meta-value">
-                                <strong>{user.grade || 5}학년 {user.classNum || 1}반</strong> (학번: {user.studentNo || '배정대기'})
+                                <strong>{user.schoolLevel || user.school || '초등학교'} {user.grade || 1}학년 {user.classNum || 1}반</strong>
                               </span>
                             </div>
                           )}
@@ -931,6 +954,36 @@ export default function StudentAdmin({
           {/* ========================================================================= */}
           {activeTab === 'users' && (
             <div className="users-management-view">
+              {pendingUsers.length > 0 && (
+                <div 
+                  className="admin-pending-notice-banner"
+                  onClick={() => setActiveTab('pending')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#fffbeb',
+                    border: '1.5px solid #fde68a',
+                    borderRadius: '12px',
+                    padding: '10px 16px',
+                    marginBottom: '14px',
+                    cursor: 'pointer',
+                    color: '#92400e',
+                    fontSize: '0.88rem',
+                    fontWeight: '600'
+                  }}
+                  title="가입 승인 대기 탭으로 바로 이동"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={16} color="#d97706" />
+                    <span>현재 승인 대기 중인 신규 가입 신청이 <strong>{pendingUsers.length}건</strong> 있습니다.</span>
+                  </div>
+                  <span style={{ fontSize: '0.82rem', color: '#b45309', textDecoration: 'underline' }}>
+                    확인 및 승인하러 가기 ➔
+                  </span>
+                </div>
+              )}
+
               {/* 필터 및 검색 바 */}
               <div className="admin-filter-bar">
                 <div className="admin-filter-roles">

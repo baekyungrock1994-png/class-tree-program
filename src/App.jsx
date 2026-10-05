@@ -17,7 +17,7 @@ import StudentAdmin from './components/StudentAdmin';
 import LoginModal from './components/LoginModal';
 import RegisterModal from './components/RegisterModal';
 import TimerExpireCelebrationModal from './components/TimerExpireCelebrationModal';
-import { subscribeBoardPosts } from './services/firebaseService';
+import { subscribeBoardPosts, subscribeUsers, saveUserToFirestore } from './services/firebaseService';
 import { logoutFirebase, onAuthListener } from './services/firebaseAuthService';
 import { 
   INITIAL_LESSON, 
@@ -140,6 +140,34 @@ export default function App() {
       console.error(e);
     }
   }, [users]);
+
+  // Firebase Firestore 실시간 사용자(users: 가입 신청, 승인 계정 등) 구독
+  useEffect(() => {
+    const unsubscribe = subscribeUsers(
+      (firestoreUsers) => {
+        if (firestoreUsers && firestoreUsers.length > 0) {
+          setUsers((prev) => {
+            const fsMap = new Map(firestoreUsers.map((u) => [u.id, u]));
+            // Firestore에 저장된 유저들을 우선으로 하고, 로컬 초기 유저(INITIAL_USERS) 중 Firestore에 아직 없는 유저도 유지
+            const merged = [...firestoreUsers];
+            prev.forEach((localU) => {
+              if (!fsMap.has(localU.id)) {
+                merged.push(localU);
+              }
+            });
+            return merged;
+          });
+        }
+      },
+      (err) => {
+        console.warn('[Firebase] users 실시간 동기화 알림:', err);
+      }
+    );
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
 
   // 현재 선택된 계층 객체들
   const [activeTeacherId, setActiveTeacherId] = useState('tch-1');
@@ -1026,6 +1054,7 @@ export default function App() {
         onOpenRegister={() => setIsRegisterModalOpen(true)}
         onLogout={handleLogout}
         onGoHome={handleGoHome}
+        pendingCount={users.filter((u) => u.status === 'pending').length}
       />
 
       {/* 관리자 모드 및 로그인 상태일 때: 상단 마스터 권한 알림 바 & 계정/권한 관리 콘솔 열기 버튼 */}
@@ -1492,8 +1521,13 @@ export default function App() {
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
         users={users}
-        onRegisterSubmit={(newUser) => {
+        onRegisterSubmit={async (newUser) => {
           setUsers((prev) => [newUser, ...prev]);
+          try {
+            await saveUserToFirestore(newUser);
+          } catch (e) {
+            console.warn('[Firebase] 가입 신청 Firestore 저장 중 오류:', e);
+          }
         }}
         onOpenLogin={() => setIsLoginModalOpen(true)}
       />

@@ -169,3 +169,78 @@ export async function uploadImageFile(file, pathPrefix = 'class-photos') {
     return null;
   }
 }
+
+/**
+ * 9. 전체 사용자(가입 신청 및 정식 계정) 실시간 구독
+ */
+export function subscribeUsers(onData, onError) {
+  try {
+    const usersRef = collection(db, 'users');
+    return onSnapshot(usersRef, (snapshot) => {
+      const usersList = [];
+      snapshot.forEach((docSnap) => {
+        usersList.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      onData(usersList);
+    }, (error) => {
+      console.warn('[Firebase] users 실시간 구독 알림:', error.message);
+      if (onError) onError(error);
+    });
+  } catch (err) {
+    console.warn('[Firebase] subscribeUsers 실패:', err);
+    if (onError) onError(err);
+    return () => {};
+  }
+}
+
+/**
+ * 10. 신규 사용자 가입 신청 또는 사용자 저장 (Firestore)
+ */
+export async function saveUserToFirestore(user) {
+  try {
+    if (!user || !user.id) return false;
+    const userRef = doc(db, 'users', user.id);
+    await setDoc(userRef, {
+      ...user,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] saveUserToFirestore 실패 (로컬 상태 유지):', error.message);
+    return false;
+  }
+}
+
+/**
+ * 11. 사용자 정보 업데이트 (승인/반려/비밀번호 변경 등)
+ */
+export async function updateUserInFirestore(userId, updates) {
+  try {
+    if (!userId) return false;
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] updateUserInFirestore 실패:', error.message);
+    return false;
+  }
+}
+
+/**
+ * 12. 사용자 삭제 (탈퇴 처리)
+ */
+export async function deleteUserFromFirestore(userId) {
+  try {
+    if (!userId) return false;
+    const userRef = doc(db, 'users', userId);
+    await deleteDoc(userRef);
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] deleteUserFromFirestore 실패:', error.message);
+    return false;
+  }
+}
+
