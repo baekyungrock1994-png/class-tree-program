@@ -91,8 +91,8 @@ export default function StudentAdmin({
   };
 
   // 대기 중인 가입 신청 목록 계산
-  const pendingUsers = users.filter((u) => u.status === 'pending');
-  const rejectedUsers = users.filter((u) => u.status === 'rejected');
+  const pendingUsers = (users || []).filter((u) => u && u.status === 'pending');
+  const rejectedUsers = (users || []).filter((u) => u && u.status === 'rejected');
 
   // 관리자 콘솔 모달이 열릴 때 가입 대기 신청이 있다면 'pending' 탭을 자동으로 보여줌
   useEffect(() => {
@@ -440,13 +440,15 @@ export default function StudentAdmin({
 
   // 학생 목록 필터링
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
+    return (students || []).filter((s) => {
+      if (!s) return false;
       const matchesGrade = classGradeFilter === 'all' || String(s.grade) === classGradeFilter;
       const matchesClass = classNumFilter === 'all' || String(s.classNum) === classNumFilter;
+      const sQuery = (classSearchQuery || '').toLowerCase();
       const matchesSearch =
-        s.name.toLowerCase().includes(classSearchQuery.toLowerCase()) ||
-        (s.studentNo && s.studentNo.includes(classSearchQuery)) ||
-        (s.className && s.className.toLowerCase().includes(classSearchQuery.toLowerCase()));
+        (s.name && s.name.toLowerCase().includes(sQuery)) ||
+        (s.studentNo && String(s.studentNo).includes(sQuery)) ||
+        (s.className && s.className.toLowerCase().includes(sQuery));
       return matchesGrade && matchesClass && matchesSearch;
     });
   }, [students, classGradeFilter, classNumFilter, classSearchQuery]);
@@ -454,7 +456,8 @@ export default function StudentAdmin({
   // 학년·반별 그룹핑 데이터 계산
   const classGroups = useMemo(() => {
     const groups = {};
-    students.forEach((s) => {
+    (students || []).forEach((s) => {
+      if (!s) return;
       const g = s.grade || 5;
       const c = s.classNum || 1;
       const key = `${g}-${c}`;
@@ -474,13 +477,15 @@ export default function StudentAdmin({
   }, [students]);
 
   // 필터링된 유저 목록 (전체 계정 탭용)
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = (users || []).filter((u) => {
+    if (!u) return false;
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+    const q = (searchQuery || '').toLowerCase();
     const matchesSearch =
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (u.detail && u.detail.toLowerCase().includes(searchQuery.toLowerCase()));
+      (u.name && u.name.toLowerCase().includes(q)) ||
+      (u.username && u.username.toLowerCase().includes(q)) ||
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.detail && u.detail.toLowerCase().includes(q));
     return matchesRole && matchesSearch;
   });
 
@@ -831,11 +836,13 @@ export default function StudentAdmin({
                       return matchesG && matchesC;
                     })
                     .map((group) => {
-                      const groupStudents = group.students.filter((s) => {
+                      const groupStudents = (group.students || []).filter((s) => {
+                        if (!s) return false;
                         if (!classSearchQuery) return true;
+                        const sq = classSearchQuery.toLowerCase();
                         return (
-                          s.name.toLowerCase().includes(classSearchQuery.toLowerCase()) ||
-                          (s.studentNo && s.studentNo.includes(classSearchQuery))
+                          (s.name && s.name.toLowerCase().includes(sq)) ||
+                          (s.studentNo && String(s.studentNo).includes(sq))
                         );
                       });
 

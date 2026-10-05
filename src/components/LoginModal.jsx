@@ -59,8 +59,8 @@ export default function LoginModal({
     }
 
     // users 목록에서 검색
-    const matched = users.find(
-      (u) => (u.username.toLowerCase() === uName.toLowerCase() || u.name === uName)
+    const matched = (users || []).find(
+      (u) => u && ((u.username && u.username.toLowerCase() === uName.toLowerCase()) || (u.name && u.name === uName))
     );
 
     if (!matched) {

@@ -146,12 +146,20 @@ export default function App() {
     const unsubscribe = subscribeUsers(
       (firestoreUsers) => {
         if (firestoreUsers && firestoreUsers.length > 0) {
+          const sanitized = firestoreUsers
+            .filter((u) => u && typeof u === 'object')
+            .map((u) => ({
+              ...u,
+              name: u.name || '사용자',
+              username: u.username || u.id || 'user',
+              role: u.role || 'student',
+              status: u.status || 'active'
+            }));
           setUsers((prev) => {
-            const fsMap = new Map(firestoreUsers.map((u) => [u.id, u]));
-            // Firestore에 저장된 유저들을 우선으로 하고, 로컬 초기 유저(INITIAL_USERS) 중 Firestore에 아직 없는 유저도 유지
-            const merged = [...firestoreUsers];
-            prev.forEach((localU) => {
-              if (!fsMap.has(localU.id)) {
+            const fsMap = new Map(sanitized.map((u) => [u.id, u]));
+            const merged = [...sanitized];
+            (prev || []).forEach((localU) => {
+              if (localU && localU.id && !fsMap.has(localU.id)) {
                 merged.push(localU);
               }
             });

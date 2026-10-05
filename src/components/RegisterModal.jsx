@@ -83,8 +83,8 @@ export default function RegisterModal({
     }
 
     // 아이디 중복 검사
-    const isDuplicate = users.some(
-      (u) => u.username.toLowerCase() === cleanUsername
+    const isDuplicate = (users || []).some(
+      (u) => u && u.username && u.username.toLowerCase() === cleanUsername
     );
     if (isDuplicate) {
       setErrorMessage('이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.');
