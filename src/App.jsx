@@ -656,7 +656,7 @@ export default function App() {
     let foundTeacher = null;
 
     for (const t of teachers) {
-      const target = t.classrooms.find((c) => c.code?.toUpperCase() === trimmed);
+      const target = t.classrooms?.find((c) => c.code?.toUpperCase() === trimmed);
       if (target) {
         foundClassroom = target;
         foundTeacher = t;
@@ -670,13 +670,32 @@ export default function App() {
 
     // 학생으로 참여 시
     if (role === 'student') {
-      const isAlreadyMember = foundClassroom.members?.some((m) => m.id === userObj.id);
+      // 1. 비로그인 상태에서 참여한 경우 자동 학생 세션 활성화
+      if (!isLoggedIn) {
+        setIsLoggedIn(true);
+      }
+      setCurrentRole('student');
+
+      const effectiveStudent = userObj || currentStudent || {
+        id: `std-${Date.now()}`,
+        name: '학생',
+        studentNo: '101',
+        className: foundClassroom.name,
+        role: 'student'
+      };
+
+      if (!currentUser) {
+        setCurrentUser(effectiveStudent);
+      }
+      setCurrentStudent(effectiveStudent);
+
+      const isAlreadyMember = foundClassroom.members?.some((m) => m.id === effectiveStudent.id);
       if (!isAlreadyMember) {
         const newMember = {
-          id: userObj.id || `std-${Date.now()}`,
-          name: userObj.name,
-          username: userObj.studentNo ? `std_${userObj.studentNo}` : (userObj.username || 'std_new'),
-          studentNo: userObj.studentNo || '10100',
+          id: effectiveStudent.id || `std-${Date.now()}`,
+          name: effectiveStudent.name || '학생',
+          username: effectiveStudent.studentNo ? `std_${effectiveStudent.studentNo}` : (effectiveStudent.username || 'std_new'),
+          studentNo: effectiveStudent.studentNo || '10100',
           role: 'student'
         };
         const updatedMembers = [...(foundClassroom.members || []), newMember];
@@ -699,22 +718,33 @@ export default function App() {
         ];
       });
 
+      // 핵심: 학생 화면 전환 (수업 차시 목록 Level 2로 즉시 이동)
       setSelectedStudentClassroomId(foundClassroom.id);
       setCurrentClassroom(foundClassroom);
+      setActiveTeacherId(foundTeacher?.id || 'tch-1');
       setViewLevel('boards');
+      setDisplayedLevel('boards');
+      setTransitionState({ phase: 'idle', level: 'boards' });
+
       return { success: true, classroom: foundClassroom };
     }
 
     // 교사(공동 수업 교사)로 참여 시
     if (role === 'teacher') {
-      const isAlreadyMember = foundClassroom.members?.some((m) => m.id === userObj.id);
+      const effectiveTeacher = userObj || currentTeacher || {
+        id: loggedInTeacherId,
+        name: '교사',
+        role: 'teacher'
+      };
+
+      const isAlreadyMember = foundClassroom.members?.some((m) => m.id === effectiveTeacher.id);
       if (!isAlreadyMember) {
         const newMember = {
-          id: userObj.id,
-          name: userObj.name,
-          username: `teacher_${userObj.id}`,
+          id: effectiveTeacher.id,
+          name: effectiveTeacher.name,
+          username: `teacher_${effectiveTeacher.id}`,
           role: 'co_teacher',
-          email: `${userObj.id}@school.edu`
+          email: `${effectiveTeacher.id}@school.edu`
         };
         const updatedMembers = [...(foundClassroom.members || []), newMember];
         handleUpdateClassroomMembers(foundClassroom.id, updatedMembers);
@@ -723,11 +753,11 @@ export default function App() {
       // 현재 교사의 학급 목록에도 추가
       setTeachers((prevTeachers) =>
         prevTeachers.map((t) => {
-          if (t.id === userObj.id) {
-            if (t.classrooms.some((c) => c.id === foundClassroom.id)) return t;
+          if (t.id === effectiveTeacher.id) {
+            if (t.classrooms?.some((c) => c.id === foundClassroom.id)) return t;
             return {
               ...t,
-              classrooms: [...t.classrooms, foundClassroom]
+              classrooms: [...(t.classrooms || []), foundClassroom]
             };
           }
           return t;
@@ -735,6 +765,11 @@ export default function App() {
       );
 
       setCurrentClassroom(foundClassroom);
+      setActiveTeacherId(foundTeacher?.id || 'tch-1');
+      setViewLevel('boards');
+      setDisplayedLevel('boards');
+      setTransitionState({ phase: 'idle', level: 'boards' });
+
       return { success: true, classroom: foundClassroom };
     }
   };

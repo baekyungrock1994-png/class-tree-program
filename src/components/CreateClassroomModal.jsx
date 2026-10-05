@@ -11,7 +11,13 @@ import {
   BookOpen
 } from 'lucide-react';
 
-const GRADE_PRESETS = ['1학년', '2학년', '3학년', '4학년', '5학년', '6학년', '동아리', '방과후', '공통'];
+const SCHOOL_LEVEL_PRESETS = {
+  초등학교: ['1학년', '2학년', '3학년', '4학년', '5학년', '6학년', '동아리', '방과후', '공통'],
+  중학교: ['1학년', '2학년', '3학년', '동아리', '방과후', '공통'],
+  고등학교: ['1학년', '2학년', '3학년', '동아리', '방과후', '공통'],
+  '기타/공통': ['동아리', '방과후', '프로젝트', '자율', '공통']
+};
+
 const SUBJECT_PRESETS = ['과학', '사회', '수학', '국어', '도덕', '실과', '미술', '음악', '창체/자율', '기타'];
 
 function generateRandomCode() {
@@ -28,12 +34,21 @@ export default function CreateClassroomModal({
   onCreateClassroom
 }) {
   const [name, setName] = useState('');
+  const [schoolLevel, setSchoolLevel] = useState('초등학교');
   const [grade, setGrade] = useState('5학년');
   const [subject, setSubject] = useState('과학');
   const [code, setCode] = useState(() => generateRandomCode());
   const [description, setDescription] = useState('');
 
   if (!isOpen) return null;
+
+  const handleSchoolLevelChange = (lvl) => {
+    setSchoolLevel(lvl);
+    const presets = SCHOOL_LEVEL_PRESETS[lvl] || SCHOOL_LEVEL_PRESETS['초등학교'];
+    if (!presets.includes(grade)) {
+      setGrade(presets[0]);
+    }
+  };
 
   const handleRegenerateCode = (e) => {
     e.preventDefault();
@@ -59,6 +74,7 @@ export default function CreateClassroomModal({
 
     onCreateClassroom({
       name: name.trim(),
+      schoolLevel,
       grade: grade.trim() || '일반',
       subject: subject.trim(),
       code: finalCode,
@@ -71,6 +87,8 @@ export default function CreateClassroomModal({
     setCode(generateRandomCode());
     onClose();
   };
+
+  const currentGradePresets = SCHOOL_LEVEL_PRESETS[schoolLevel] || SCHOOL_LEVEL_PRESETS['초등학교'];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -86,10 +104,7 @@ export default function CreateClassroomModal({
               <School size={22} />
             </div>
             <div>
-              <h3 className="modal-title">새 학급(교실) 개설</h3>
-              <p className="modal-subtitle">
-                <strong>{teacher?.name || '선생님'}</strong>의 새로운 수업 공간 또는 동아리 교실을 생성합니다.
-              </p>
+              <h3 className="modal-title">새 학급 개설</h3>
             </div>
           </div>
           <button 
@@ -120,16 +135,27 @@ export default function CreateClassroomModal({
                 autoFocus
                 required
               />
-              <p className="form-help-text">
-                학생들과 동료 선생님이 쉽게 알아볼 수 있는 반 또는 활동명을 적어주세요.
-              </p>
             </div>
 
-            {/* 2. 학년 및 과목 빠른 선택 */}
+            {/* 2. 학교 급 및 학년 선택 */}
             <div className="form-group mb-4">
-              <label className="form-label font-bold">학년 / 학급 구분</label>
+              <label className="form-label font-bold">학교 급 선택</label>
+              <div className="school-type-toggle-group mb-2">
+                {Object.keys(SCHOOL_LEVEL_PRESETS).map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    className={`school-type-pill-btn ${schoolLevel === lvl ? 'active' : ''}`}
+                    onClick={() => handleSchoolLevelChange(lvl)}
+                  >
+                    <span>{lvl}</span>
+                  </button>
+                ))}
+              </div>
+
+              <label className="form-label font-bold mt-3">학년 / 학급 구분 ({schoolLevel})</label>
               <div className="preset-chip-list">
-                {GRADE_PRESETS.map((g) => (
+                {currentGradePresets.map((g) => (
                   <button
                     key={g}
                     type="button"
@@ -189,9 +215,6 @@ export default function CreateClassroomModal({
                   <span>랜덤 생성</span>
                 </button>
               </div>
-              <p className="form-help-text" style={{ color: '#4f46e5' }}>
-                💡 개설 후 학생들에게 이 코드를 공유하면 <strong>[새 교실 참여하기]</strong>를 통해 즉시 참여할 수 있습니다.
-              </p>
             </div>
 
             {/* 4. 학급 소개 및 수업 안내 */}

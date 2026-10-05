@@ -8848,7 +8848,7 @@ button, input, select, textarea {
 
 .school-type-toggle-group {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
   gap: 6px;
   background: #f1f5f9;
   padding: 4px;

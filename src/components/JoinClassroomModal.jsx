@@ -61,7 +61,7 @@ export default function JoinClassroomModal({
       }
       setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 500);
     } else {
       setErrorMsg(result?.message || '초대 코드를 다시 확인해 주세요.');
     }
