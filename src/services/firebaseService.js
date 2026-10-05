@@ -244,3 +244,74 @@ export async function deleteUserFromFirestore(userId) {
   }
 }
 
+/**
+ * 13. 학급(교실) Firestore 실시간 저장
+ */
+export async function saveClassroomToFirestore(classroom) {
+  try {
+    if (!classroom || !classroom.id) return false;
+    const cleanCode = (classroom.code || '').trim().toUpperCase();
+    const normalizedCode = cleanCode.replace(/[\s\-_]/g, '');
+    const classRef = doc(db, 'classrooms', classroom.id);
+    await setDoc(classRef, {
+      ...classroom,
+      code: cleanCode,
+      normalizedCode,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] saveClassroomToFirestore 실패:', error.message);
+    return false;
+  }
+}
+
+/**
+ * 14. 전체 학급(교실) 실시간 구독
+ */
+export function subscribeClassrooms(onData, onError) {
+  try {
+    const classRef = collection(db, 'classrooms');
+    return onSnapshot(classRef, (snapshot) => {
+      const list = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      onData(list);
+    }, (error) => {
+      console.warn('[Firebase] classrooms 실시간 구독 알림:', error.message);
+      if (onError) onError(error);
+    });
+  } catch (err) {
+    console.warn('[Firebase] subscribeClassrooms 실패:', err);
+    if (onError) onError(err);
+    return () => {};
+  }
+}
+
+/**
+ * 15. 코드로 학급 찾기 (Firestore)
+ */
+export async function findClassroomByCodeInFirestore(inputCode) {
+  try {
+    if (!inputCode) return null;
+    const normalizedInput = inputCode.toString().trim().toUpperCase().replace(/[\s\-_]/g, '');
+    const classRef = collection(db, 'classrooms');
+    const snapshot = await getDocs(classRef);
+    let found = null;
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const codeA = (data.code || '').toString().trim().toUpperCase().replace(/[\s\-_]/g, '');
+      const codeB = (data.normalizedCode || '').toString().trim().toUpperCase();
+      if (codeA === normalizedInput || codeB === normalizedInput) {
+        found = { id: docSnap.id, ...data };
+      }
+    });
+    return found;
+  } catch (error) {
+    console.warn('[Firebase] findClassroomByCodeInFirestore 실패:', error.message);
+    return null;
+  }
+}
+
+

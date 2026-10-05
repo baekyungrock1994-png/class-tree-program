@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   GitFork, 
   X, 
@@ -28,6 +28,9 @@ export default function RegisterModal({
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   
+  // 드래그 중 창 바깥에서 마우스를 뗐을 때 팝업이 닫히는 문제 방지 ref
+  const isBackdropMouseDownRef = useRef(false);
+
   // 학생용 필드: 학교 급별 선택 ('초등학교', '중학교', '고등학교')
   const [schoolType, setSchoolType] = useState('초등학교'); // '초등학교' | '중학교' | '고등학교'
   const [studentGrade, setStudentGrade] = useState('1');
@@ -60,6 +63,21 @@ export default function RegisterModal({
     setIsSuccess(false);
     setErrorMessage('');
     onClose();
+  };
+
+  const handleOverlayMouseDown = (e) => {
+    if (e.target === e.currentTarget) {
+      isBackdropMouseDownRef.current = true;
+    } else {
+      isBackdropMouseDownRef.current = false;
+    }
+  };
+
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      handleClose();
+    }
+    isBackdropMouseDownRef.current = false;
   };
 
   const handleSubmit = (e) => {
@@ -135,7 +153,11 @@ export default function RegisterModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div 
         className="modal-content register-modal-card" 
         onClick={(e) => e.stopPropagation()}

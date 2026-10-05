@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Download, 
   FileText, 
@@ -18,6 +18,17 @@ export default function ExportModal({
   posts,
   students
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState('');
 
@@ -74,7 +85,11 @@ export default function ExportModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div className="modal-content" style={{ maxWidth: '620px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

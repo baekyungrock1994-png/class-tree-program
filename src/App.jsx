@@ -17,7 +17,14 @@ import StudentAdmin from './components/StudentAdmin';
 import LoginModal from './components/LoginModal';
 import RegisterModal from './components/RegisterModal';
 import TimerExpireCelebrationModal from './components/TimerExpireCelebrationModal';
-import { subscribeBoardPosts, subscribeUsers, saveUserToFirestore } from './services/firebaseService';
+import { 
+  subscribeBoardPosts, 
+  subscribeUsers, 
+  saveUserToFirestore,
+  saveClassroomToFirestore,
+  subscribeClassrooms,
+  findClassroomByCodeInFirestore
+} from './services/firebaseService';
 import { logoutFirebase, onAuthListener } from './services/firebaseAuthService';
 import { 
   INITIAL_LESSON, 
@@ -177,6 +184,43 @@ export default function App() {
     };
   }, []);
 
+  // Firebase Firestore 실시간 학급(교실: classrooms) 구독
+  useEffect(() => {
+    const unsubscribe = subscribeClassrooms(
+      (firestoreClassrooms) => {
+        if (firestoreClassrooms && firestoreClassrooms.length > 0) {
+          setTeachers((prevTeachers) => {
+            return prevTeachers.map((teacher) => {
+              const teacherRooms = firestoreClassrooms.filter(
+                (c) => c.teacherId === teacher.id || c.members?.some((m) => m.id === teacher.id && m.role === 'owner')
+              );
+              if (teacherRooms.length === 0) return teacher;
+              
+              const existingMap = new Map((teacher.classrooms || []).map((c) => [c.id, c]));
+              const mergedRooms = [...(teacher.classrooms || [])];
+              teacherRooms.forEach((r) => {
+                if (existingMap.has(r.id)) {
+                  const idx = mergedRooms.findIndex((cr) => cr.id === r.id);
+                  if (idx !== -1) mergedRooms[idx] = { ...mergedRooms[idx], ...r };
+                } else {
+                  mergedRooms.push(r);
+                }
+              });
+              return { ...teacher, classrooms: mergedRooms };
+            });
+          });
+        }
+      },
+      (err) => {
+        console.warn('[Firebase] classrooms 실시간 동기화 알림:', err);
+      }
+    );
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
+
   // 현재 선택된 계층 객체들
   const [activeTeacherId, setActiveTeacherId] = useState('tch-1');
   const currentTeacher = teachers.find((t) => t.id === activeTeacherId) || teachers[0];
@@ -250,6 +294,17 @@ export default function App() {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [showStudentProfileModal, setShowStudentProfileModal] = useState(false);
   const [isTimerCelebrationOpen, setIsTimerCelebrationOpen] = useState(false);
+
+  const profileModalBackdropRef = useRef(false);
+  const handleProfileOverlayMouseDown = (e) => {
+    profileModalBackdropRef.current = (e.target === e.currentTarget);
+  };
+  const handleProfileOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && profileModalBackdropRef.current) {
+      setShowStudentProfileModal(false);
+    }
+    profileModalBackdropRef.current = false;
+  };
 
   // 참여 인원 관리 모달 & 코드 초대/참여 모달 & 차시 생성 모달 상태
   const [selectedManageClassroom, setSelectedManageClassroom] = useState(null);
@@ -435,14 +490,18 @@ export default function App() {
   };
 
   // 새 학급(교실) 개설 핸들러
-  const handleCreateClassroom = (newClassroomData) => {
+  const handleCreateClassroom = async (newClassroomData) => {
     const newClassroomId = `cls-${Date.now()}`;
+    const cleanCode = (newClassroomData.code || '').trim().toUpperCase();
     const newClassroom = {
       id: newClassroomId,
+      teacherId: currentTeacher?.id || 'tch-1',
+      teacherName: currentTeacher?.name || '선생님',
       name: newClassroomData.name,
+      schoolLevel: newClassroomData.schoolLevel || '초등학교',
       grade: newClassroomData.grade || '일반',
       subject: newClassroomData.subject || '',
-      code: newClassroomData.code,
+      code: cleanCode,
       description: newClassroomData.description || '',
       members: [
         {
@@ -467,6 +526,13 @@ export default function App() {
 
     // 바로 생성된 학급을 현재 학급으로 선택
     setCurrentClassroom(newClassroom);
+
+    // Firestore에 즉시 저장
+    try {
+      await saveClassroomToFirestore(newClassroom);
+    } catch (e) {
+      console.warn('[Firebase] 교실 저장 오류:', e);
+    }
   };
 
   // 학급 정보 수정 저장 핸들러
@@ -650,13 +716,19 @@ export default function App() {
   };
 
   // 고유 코드를 통한 학급 참여 핸들러 (학생 or 교사)
-  const handleJoinClassroomByCode = (inputCode, role, userObj) => {
-    const trimmed = inputCode.trim().toUpperCase();
+  const handleJoinClassroomByCode = async (inputCode, role, userObj) => {
+    const rawInput = (inputCode || '').toString().trim().toUpperCase();
+    const normalizedInput = rawInput.replace(/[\s\-_]/g, '');
     let foundClassroom = null;
     let foundTeacher = null;
 
+    // 1. 로컬 교사 목록에서 검색 (공백/하이픈 무시 정규화 매칭)
     for (const t of teachers) {
-      const target = t.classrooms?.find((c) => c.code?.toUpperCase() === trimmed);
+      const target = t.classrooms?.find((c) => {
+        const cCode = (c.code || '').toString().trim().toUpperCase();
+        const cNorm = cCode.replace(/[\s\-_]/g, '');
+        return cNorm === normalizedInput || cCode === rawInput;
+      });
       if (target) {
         foundClassroom = target;
         foundTeacher = t;
@@ -664,8 +736,44 @@ export default function App() {
       }
     }
 
+    // 2. 로컬에서 못 찾은 경우 Firestore에서 직접 검색 (다른 기기/브라우저에서 개설된 경우)
     if (!foundClassroom) {
-      return { success: false, message: `초대 코드 [${trimmed}]와 일치하는 학급(교실)을 찾을 수 없습니다.` };
+      try {
+        const fsClassroom = await findClassroomByCodeInFirestore(inputCode);
+        if (fsClassroom) {
+          foundClassroom = fsClassroom;
+          foundTeacher = teachers.find((t) => t.id === fsClassroom.teacherId) || {
+            id: fsClassroom.teacherId || 'tch-1',
+            name: fsClassroom.teacherName || '담당 교사',
+            role: '교사',
+            classrooms: [fsClassroom]
+          };
+
+          // 로컬 teachers에도 동기화
+          setTeachers((prev) => {
+            const hasTeacher = prev.some((t) => t.id === foundTeacher.id);
+            if (hasTeacher) {
+              return prev.map((t) =>
+                t.id === foundTeacher.id
+                  ? {
+                      ...t,
+                      classrooms: t.classrooms?.some((c) => c.id === foundClassroom.id)
+                        ? t.classrooms
+                        : [...(t.classrooms || []), foundClassroom]
+                    }
+                  : t
+              );
+            }
+            return [...prev, foundTeacher];
+          });
+        }
+      } catch (err) {
+        console.warn('[Firebase] Firestore 교실 코드 조회 오류:', err);
+      }
+    }
+
+    if (!foundClassroom) {
+      return { success: false, message: `초대 코드 [${rawInput}]와 일치하는 학급(교실)을 찾을 수 없습니다.` };
     }
 
     // 학생으로 참여 시
@@ -1427,7 +1535,11 @@ export default function App() {
 
       {/* 모달들 */}
       {showStudentProfileModal && (
-        <div className="modal-overlay" onClick={() => setShowStudentProfileModal(false)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleProfileOverlayMouseDown}
+          onMouseUp={handleProfileOverlayMouseUp}
+        >
           <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">개인정보 변경 요청</span>

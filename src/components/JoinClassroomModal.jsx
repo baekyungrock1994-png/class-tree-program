@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   KeyRound, 
   X, 
@@ -8,8 +8,8 @@ import {
   Users, 
   Copy, 
   Check, 
-  ShieldCheck,
-  AlertCircle
+  ShieldCheck, 
+  AlertCircle 
 } from 'lucide-react';
 
 export default function JoinClassroomModal({
@@ -25,7 +25,11 @@ export default function JoinClassroomModal({
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // 드래그 중 창 바깥에서 마우스를 뗐을 때 팝업이 닫히는 문제 방지 ref
+  const isBackdropMouseDownRef = useRef(false);
+
   // 교사 모드일 때 탭: 'join' (다른 교실에 공동교사로 참여) vs 'invite' (내 교실 코드 확인/공유)
   const [teacherTab, setTeacherTab] = useState('invite');
 
@@ -40,7 +44,22 @@ export default function JoinClassroomModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubmit = (e) => {
+  const handleOverlayMouseDown = (e) => {
+    if (e.target === e.currentTarget) {
+      isBackdropMouseDownRef.current = true;
+    } else {
+      isBackdropMouseDownRef.current = false;
+    }
+  };
+
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
@@ -50,25 +69,37 @@ export default function JoinClassroomModal({
       return;
     }
 
-    const userObj = isTeacher ? currentTeacher : currentStudent;
-    const result = onJoinByCode(code.trim(), currentRole, userObj);
+    try {
+      setIsSubmitting(true);
+      const userObj = isTeacher ? currentTeacher : currentStudent;
+      const result = await onJoinByCode(code.trim(), currentRole, userObj);
 
-    if (result && result.success) {
-      if (currentRole === 'teacher') {
-        setSuccessMsg(`"${result.classroom.name}" 학급에 공동 수업 교사로 성공적으로 등록되었습니다!`);
+      if (result && result.success) {
+        if (currentRole === 'teacher') {
+          setSuccessMsg(`"${result.classroom.name}" 학급에 공동 수업 교사로 성공적으로 등록되었습니다!`);
+        } else {
+          setSuccessMsg(`"${result.classroom.name}" 교실에 성공적으로 참여하였습니다!`);
+        }
+        setTimeout(() => {
+          onClose();
+        }, 400);
       } else {
-        setSuccessMsg(`"${result.classroom.name}" 교실에 성공적으로 참여하였습니다!`);
+        setErrorMsg(result?.message || '초대 코드를 다시 확인해 주세요.');
       }
-      setTimeout(() => {
-        onClose();
-      }, 500);
-    } else {
-      setErrorMsg(result?.message || '초대 코드를 다시 확인해 주세요.');
+    } catch (err) {
+      console.error('교실 참여 처리 중 오류:', err);
+      setErrorMsg('교실 참여 처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div className="modal-content join-classroom-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-with-icon">

@@ -45,6 +45,17 @@ export default function TimerExpireCelebrationModal({ onClose, currentRole }) {
   const canvasRef = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
 
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   // 사운드 재생
   useEffect(() => {
     if (!isMuted) {
@@ -262,7 +273,11 @@ export default function TimerExpireCelebrationModal({ onClose, currentRole }) {
   }, []);
 
   return (
-    <div className="timer-celebration-backdrop" onClick={onClose}>
+    <div 
+      className="timer-celebration-backdrop" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       {/* 1. 배경 폭죽 캔버스 (클릭 시에도 팡팡 터짐) */}
       <canvas ref={canvasRef} className="timer-celebration-canvas" />
 

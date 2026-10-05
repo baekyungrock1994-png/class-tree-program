@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   GitFork, 
   X, 
@@ -22,6 +22,17 @@ export default function LoginModal({
   currentRole,
   onOpenRegister
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [selectedRole, setSelectedRole] = useState(currentRole || 'teacher');
@@ -154,7 +165,11 @@ export default function LoginModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div 
         className="modal-content login-modal-card" 
         onClick={(e) => e.stopPropagation()}

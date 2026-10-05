@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   X, 
@@ -21,6 +21,17 @@ export default function CreateBoardModal({
   onCreateBoard,
   availableClassrooms = []
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [tab, setTab] = useState('scratch'); // 'scratch' | 'copy'
 
   // 직접 새로 만들기 상태
@@ -121,7 +132,11 @@ export default function CreateBoardModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div className="modal-content create-board-modal" onClick={(e) => e.stopPropagation()}>
         {/* 모달 헤더 */}
         <div className="modal-header">

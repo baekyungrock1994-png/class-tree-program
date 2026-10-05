@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   ThumbsUp, 
@@ -43,6 +43,17 @@ export default function PadletBoard({
   onBackToOverview,
   onToggleCanvas
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const createBackdropMouseUpHandler = (closeFn) => (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      closeFn();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const isTeacher = (currentRole === 'teacher' || currentRole === 'admin') && canModify;
   const [activeSectionForNewPost, setActiveSectionForNewPost] = useState('학생 발표');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -877,7 +888,11 @@ export default function PadletBoard({
 
       {/* 새 카드 작성 모달 */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={createBackdropMouseUpHandler(() => setShowCreateModal(false))}
+        >
           <div className="modal-content padlet-create-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">
@@ -1006,10 +1021,11 @@ export default function PadletBoard({
       {activeViewingPost && (
         <div 
           className="modal-overlay" 
-          onClick={() => {
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={createBackdropMouseUpHandler(() => {
             setIsEditingInsideModal(false);
             setViewingPost(null);
-          }}
+          })}
         >
           <div 
             className="apple-card-modal-dialog" 
@@ -1245,7 +1261,11 @@ export default function PadletBoard({
 
       {/* 2번 요구사항: 카드 내용 수정 모달 */}
       {editingPost && (
-        <div className="modal-overlay" onClick={() => setEditingPost(null)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={createBackdropMouseUpHandler(() => setEditingPost(null))}
+        >
           <div className="modal-content" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

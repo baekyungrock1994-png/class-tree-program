@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Users, 
   X, 
@@ -20,6 +20,17 @@ export default function ClassroomMembersModal({
   onUpdateMembers,
   currentTeacherName = '김길동T'
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'teacher' | 'student'
   
@@ -118,7 +129,11 @@ export default function ClassroomMembersModal({
   const studentCount = members.filter((m) => m.role === 'student').length;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div className="modal-content classroom-members-modal" onClick={(e) => e.stopPropagation()}>
         {/* 모달 헤더 */}
         <div className="modal-header">

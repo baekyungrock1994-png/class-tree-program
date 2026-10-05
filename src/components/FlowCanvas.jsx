@@ -417,6 +417,17 @@ export default function FlowCanvas({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dragInfoRef = useRef({ startX: 0, startY: 0, isDragging: false });
 
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const createBackdropMouseUpHandler = (closeFn) => (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      closeFn();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   // 화살표 자유 연결 시스템 상태
   const [connectingFromId, setConnectingFromId] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -1346,7 +1357,11 @@ export default function FlowCanvas({
 
       {/* 모달들 */}
       {showAddModal && (
-        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={createBackdropMouseUpHandler(() => setShowAddModal(false))}
+        >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">수업 흐름도 단계 카드 추가</span>
@@ -1567,7 +1582,11 @@ export default function FlowCanvas({
       )}
 
       {showAiModal && (
-        <div className="modal-overlay" onClick={() => setShowAiModal(false)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={createBackdropMouseUpHandler(() => setShowAiModal(false))}
+        >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1622,7 +1641,11 @@ export default function FlowCanvas({
 
       {/* 노드 카드 내용 수정 모달 */}
       {editingNode && (
-        <div className="modal-overlay" onClick={() => setEditingNode(null)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={createBackdropMouseUpHandler(() => setEditingNode(null))}
+        >
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2089,7 +2112,12 @@ export default function FlowCanvas({
         };
 
         return (
-          <div className="modal-overlay" onClick={() => setPlayingVideoNode(null)} style={{ zIndex: 1200 }}>
+          <div 
+            className="modal-overlay" 
+            onMouseDown={handleOverlayMouseDown}
+            onMouseUp={createBackdropMouseUpHandler(() => setPlayingVideoNode(null))}
+            style={{ zIndex: 1200 }}
+          >
             <div className="flow-video-modal-dialog" onClick={(e) => e.stopPropagation()} style={{ width: '720px' }}>
               <div className="flow-video-modal-header">
                 <div className="flow-video-modal-title">

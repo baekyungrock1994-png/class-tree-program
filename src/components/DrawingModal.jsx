@@ -8,6 +8,17 @@ export default function DrawingModal({ isOpen, onClose, onSave }) {
   const [lineWidth, setLineWidth] = useState(3);
   const [isEraser, setIsEraser] = useState(false);
 
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const colors = ['#0f172a', '#ef4444', '#f97316', '#10b981', '#0ea5e9', '#6366f1', '#a855f7'];
 
   useEffect(() => {
@@ -73,7 +84,11 @@ export default function DrawingModal({ isOpen, onClose, onSave }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div className="modal-content" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

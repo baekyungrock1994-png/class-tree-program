@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Compass, 
@@ -15,6 +15,17 @@ export default function EditBoardModal({
   board,
   onSaveBoard
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [title, setTitle] = useState('');
   const [mode, setMode] = useState('guided');
   const [description, setDescription] = useState('');
@@ -46,7 +57,11 @@ export default function EditBoardModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div 
         className="modal-content create-board-modal" 
         onClick={(e) => e.stopPropagation()}

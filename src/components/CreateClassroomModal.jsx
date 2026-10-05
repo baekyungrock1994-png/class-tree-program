@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   School, 
   X, 
@@ -40,7 +40,25 @@ export default function CreateClassroomModal({
   const [code, setCode] = useState(() => generateRandomCode());
   const [description, setDescription] = useState('');
 
+  // 드래그 중 창 바깥에서 마우스를 뗐을 때 팝업이 닫히는 문제 방지 ref
+  const isBackdropMouseDownRef = useRef(false);
+
   if (!isOpen) return null;
+
+  const handleOverlayMouseDown = (e) => {
+    if (e.target === e.currentTarget) {
+      isBackdropMouseDownRef.current = true;
+    } else {
+      isBackdropMouseDownRef.current = false;
+    }
+  };
+
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
 
   const handleSchoolLevelChange = (lvl) => {
     setSchoolLevel(lvl);
@@ -91,7 +109,11 @@ export default function CreateClassroomModal({
   const currentGradePresets = SCHOOL_LEVEL_PRESETS[schoolLevel] || SCHOOL_LEVEL_PRESETS['초등학교'];
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div 
         className="modal-content create-classroom-modal" 
         onClick={(e) => e.stopPropagation()}

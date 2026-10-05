@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   School, 
   BookOpen, 
@@ -27,6 +27,18 @@ export default function ClassroomCardView({
   onDeleteClassroom,
   loggedInTeacherId = 'tch-1'
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      setCodeModalClassroom(null);
+      setIsBigCodeView(false);
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const classrooms = teacher?.classrooms || [];
   const isTeacher = currentRole === 'teacher';
   const isAdmin = currentRole === 'admin';
@@ -217,10 +229,8 @@ export default function ClassroomCardView({
       {codeModalClassroom && (
         <div 
           className="apple-modal-overlay" 
-          onClick={() => {
-            setCodeModalClassroom(null);
-            setIsBigCodeView(false);
-          }}
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={handleOverlayMouseUp}
         >
           <div 
             className={`apple-modal-card ${isBigCodeView ? 'big-view' : ''}`}

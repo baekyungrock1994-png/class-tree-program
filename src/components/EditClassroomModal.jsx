@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   School, 
   X, 
@@ -26,6 +26,17 @@ export default function EditClassroomModal({
   classroom,
   onSaveClassroom
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      onClose();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [name, setName] = useState('');
   const [grade, setGrade] = useState('5학년');
   const [subject, setSubject] = useState('과학');
@@ -74,7 +85,11 @@ export default function EditClassroomModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div 
         className="modal-content create-classroom-modal" 
         onClick={(e) => e.stopPropagation()}

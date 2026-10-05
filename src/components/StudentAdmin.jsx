@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   UserCheck, 
   KeyRound, 
@@ -46,6 +46,17 @@ export default function StudentAdmin({
   changeRequests = [],
   setChangeRequests
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const createBackdropMouseUpHandler = (closeFn) => (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      closeFn();
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   // 모달 상단 탭: 'users' (전체 계정), 'pending' (가입 승인/반려 대기), 'classes' (학생 학년·반별 보기), 'requests' (프로필 변경)
   const [activeTab, setActiveTab] = useState('users');
   const [roleFilter, setRoleFilter] = useState('all'); // 'all', 'teacher', 'student'
@@ -492,7 +503,11 @@ export default function StudentAdmin({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div 
+      className="modal-overlay" 
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={createBackdropMouseUpHandler(onClose)}
+    >
       <div 
         className="modal-content admin-modal-wide"
         onClick={(e) => e.stopPropagation()}
@@ -1286,7 +1301,11 @@ export default function StudentAdmin({
         {/* 모달 1: 비밀번호 직접 변경 다이얼로그 */}
         {/* ========================================================================= */}
         {pwTargetUser && (
-          <div className="submodal-overlay" onClick={() => setPwTargetUser(null)}>
+          <div 
+            className="submodal-overlay" 
+            onMouseDown={handleOverlayMouseDown}
+            onMouseUp={createBackdropMouseUpHandler(() => setPwTargetUser(null))}
+          >
             <div className="submodal-card" onClick={(e) => e.stopPropagation()}>
               <div className="submodal-header">
                 <div className="submodal-title-with-icon">
@@ -1345,7 +1364,11 @@ export default function StudentAdmin({
         {/* 모달 2: 가입 반려 사유 입력 다이얼로그 */}
         {/* ========================================================================= */}
         {rejectingUser && (
-          <div className="submodal-overlay" onClick={() => setRejectingUser(null)}>
+          <div 
+            className="submodal-overlay" 
+            onMouseDown={handleOverlayMouseDown}
+            onMouseUp={createBackdropMouseUpHandler(() => setRejectingUser(null))}
+          >
             <div className="submodal-card" onClick={(e) => e.stopPropagation()}>
               <div className="submodal-header">
                 <div className="submodal-title-with-icon">
@@ -1421,7 +1444,11 @@ export default function StudentAdmin({
         {/* 모달 3: 학생 학년 / 반 변경 다이얼로그 */}
         {/* ========================================================================= */}
         {changingGradeStudent && (
-          <div className="submodal-overlay" onClick={() => setChangingGradeStudent(null)}>
+          <div 
+            className="submodal-overlay" 
+            onMouseDown={handleOverlayMouseDown}
+            onMouseUp={createBackdropMouseUpHandler(() => setChangingGradeStudent(null))}
+          >
             <div className="submodal-card" onClick={(e) => e.stopPropagation()}>
               <div className="submodal-header">
                 <div className="submodal-title-with-icon">
@@ -1492,7 +1519,11 @@ export default function StudentAdmin({
         {/* 모달 4: 신규 회원 직접 추가 다이얼로그 */}
         {/* ========================================================================= */}
         {isAddUserOpen && (
-          <div className="submodal-overlay" onClick={() => setIsAddUserOpen(false)}>
+          <div 
+            className="submodal-overlay" 
+            onMouseDown={handleOverlayMouseDown}
+            onMouseUp={createBackdropMouseUpHandler(() => setIsAddUserOpen(false))}
+          >
             <div className="submodal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
               <div className="submodal-header">
                 <div className="submodal-title-with-icon">

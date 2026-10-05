@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Clock, 
   Play, 
@@ -23,6 +23,17 @@ export default function TimerControl({
   lessonCode = 'SCI-502',
   onTimerExpire
 }) {
+  const isBackdropMouseDownRef = useRef(false);
+  const handleOverlayMouseDown = (e) => {
+    isBackdropMouseDownRef.current = (e.target === e.currentTarget);
+  };
+  const handleOverlayMouseUp = (e) => {
+    if (e.target === e.currentTarget && isBackdropMouseDownRef.current) {
+      setShowQrModal(false);
+    }
+    isBackdropMouseDownRef.current = false;
+  };
+
   const [inputMinutes, setInputMinutes] = useState('10');
   const [inputSeconds, setInputSeconds] = useState('00');
   const [baseTotalSeconds, setBaseTotalSeconds] = useState(600);
@@ -330,7 +341,11 @@ export default function TimerControl({
 
       {/* QR 모달 */}
       {showQrModal && (
-        <div className="modal-overlay" onClick={() => setShowQrModal(false)}>
+        <div 
+          className="modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={handleOverlayMouseUp}
+        >
           <div className="modal-content" style={{ maxWidth: '380px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <span className="modal-title">학생 접속 안내</span>
