@@ -81,6 +81,12 @@ export default function StudentAdmin({
   const [newUserClassNum, setNewUserClassNum] = useState(1);
   const [newUserDetail, setNewUserDetail] = useState('');
 
+  // 학생 명단 일괄 등록(한번에 등록) 모달 상태
+  const [isBatchAddOpen, setIsBatchAddOpen] = useState(false);
+  const [batchGrade, setBatchGrade] = useState(5);
+  const [batchClassNum, setBatchClassNum] = useState(1);
+  const [batchNamesText, setBatchNamesText] = useState('');
+
   // 가입 신청 반려 입력 모달 상태
   const [rejectingUser, setRejectingUser] = useState(null);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
@@ -206,43 +212,74 @@ export default function StudentAdmin({
     showToast(`반려되었던 [${user.name}] 님의 계정을 재승인하였습니다.`);
   };
 
-  // 1-5. 가입 신청 테스트 시뮬레이션 생성
-  const handleSimulateNewRegistration = (roleType) => {
-    const randomId = Date.now().toString().slice(-4);
-    const isTch = roleType === 'teacher';
-    const fakeUser = isTch
-      ? {
-          id: `usr-pending-${Date.now()}`,
-          name: `박새롬T`,
-          username: `teacher_park${randomId}`,
-          password: 'password123!',
-          role: 'teacher',
-          email: `park${randomId}@school.edu`,
-          detail: '교사 (신규 가입 신청)',
-          joinedDate: '방금 전',
-          status: 'pending',
-          requestReason: '스마트 영어 교실 수업 개설 및 학생 협동 학습용'
-        }
-      : {
-          id: `usr-pending-${Date.now()}`,
-          name: `송민서`,
-          username: `std_501${randomId.slice(-2)}`,
-          password: 'password123!',
-          role: 'student',
-          schoolLevel: '초등학교',
-          grade: 5,
-          classNum: 1,
-          studentNo: `501${randomId.slice(-2)}`,
-          email: `std501${randomId.slice(-2)}@school.edu`,
-          detail: '초등학교 5학년 1반',
-          joinedDate: '방금 전',
-          status: 'pending',
-          requestReason: '과학 탐구 프로젝트 수업 참가용 가입 신청'
-        };
+  // 1-5. 학생 명단 텍스트 파싱 (이름, 번호, 아이디=이름, 초기비번=1234)
+  const parsedBatchStudents = useMemo(() => {
+    if (!batchNamesText.trim()) return [];
+    const rawTokens = batchNamesText.split(/[\n,;/]+/);
+    const existingUsernames = new Set((users || []).map((u) => (u.username || '').toLowerCase()));
 
-    setUsers((prev) => [fakeUser, ...prev]);
-    saveUserToFirestore(fakeUser);
-    showToast(`테스트 가입 신청이 접수되었습니다: [${fakeUser.name} (${isTch ? '교사' : '학생'})]`);
+    const list = [];
+    rawTokens.forEach((token) => {
+      // 1. 앞쪽 번호 및 기호(예: '1.', '1번', '1 - ', '[1]') 정제
+      let clean = token.replace(/^[0-9]+[\.\-\_\번\s\)]*/, '').trim();
+      clean = clean.replace(/^[\[\(][0-9]+[\]\)]\s*/, '').trim();
+      if (!clean) return;
+
+      const currentIdx = list.length + 1;
+      // 아이디는 학생의 이름으로 지정 (동명이인/기존 중복 방지)
+      let uname = clean;
+      let counter = 1;
+      while (existingUsernames.has(uname.toLowerCase())) {
+        counter++;
+        uname = `${clean}${counter}`;
+      }
+      existingUsernames.add(uname.toLowerCase());
+
+      const numStr = currentIdx < 10 ? `0${currentIdx}` : `${currentIdx}`;
+      const studentNo = `${batchGrade}0${batchClassNum}${numStr}`;
+
+      list.push({
+        id: `usr-std-${Date.now()}-${currentIdx}-${Math.random().toString(36).slice(2, 6)}`,
+        name: clean,
+        username: uname, // 아이디는 학생들의 이름
+        password: '1234', // 초기 비밀번호는 1234로 통일
+        role: 'student',
+        grade: Number(batchGrade),
+        classNum: Number(batchClassNum),
+        studentNo,
+        detail: `${batchGrade}학년 ${batchClassNum}반 ${currentIdx}번`,
+        email: `${uname}@school.edu`,
+        joinedDate: new Date().toISOString().split('T')[0],
+        status: 'active' // 승인 없이 즉시 가입 완료 상태
+      });
+    });
+    return list;
+  }, [batchNamesText, batchGrade, batchClassNum, users]);
+
+  // 학생 명단 일괄 등록 확정
+  const handleConfirmBatchAdd = (e) => {
+    e.preventDefault();
+    if (parsedBatchStudents.length === 0) {
+      alert('등록할 학생 이름을 1명 이상 입력해 주세요.');
+      return;
+    }
+
+    // 1. users state에 추가
+    setUsers((prev) => [...parsedBatchStudents, ...prev]);
+
+    // 2. students 상태에도 추가
+    if (setStudents) {
+      setStudents((prev) => [...parsedBatchStudents, ...(prev || [])]);
+    }
+
+    // 3. Firestore 실시간 저장
+    for (const newStudent of parsedBatchStudents) {
+      saveUserToFirestore(newStudent);
+    }
+
+    showToast(`${batchGrade}학년 ${batchClassNum}반 학생 ${parsedBatchStudents.length}명의 계정이 일괄 등록되었습니다. (초기 비밀번호: 1234)`);
+    setBatchNamesText('');
+    setIsBatchAddOpen(false);
   };
 
   // =========================================================================
@@ -610,20 +647,6 @@ export default function StudentAdmin({
                   </p>
                 </div>
                 <div className="admin-action-btn-group">
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => handleSimulateNewRegistration('teacher')}
-                    title="교사 가입 신청 테스트 데이터 생성"
-                  >
-                    <Plus size={13} /> 교사 신청 테스트
-                  </button>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => handleSimulateNewRegistration('student')}
-                    title="학생 가입 신청 테스트 데이터 생성"
-                  >
-                    <Plus size={13} /> 학생 신청 테스트
-                  </button>
                   {pendingUsers.length > 0 && (
                     <button
                       className="btn btn-primary btn-sm"
@@ -1044,12 +1067,25 @@ export default function StudentAdmin({
                   )}
                 </div>
 
-                <button
-                  className="btn btn-primary btn-sm btn-add-user"
-                  onClick={() => setIsAddUserOpen(true)}
-                >
-                  <UserPlus size={14} /> 신규 회원 직접 등록
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm btn-batch-add"
+                    style={{ background: 'linear-gradient(135deg, #059669, #10b981)', border: 'none', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)' }}
+                    onClick={() => setIsBatchAddOpen(true)}
+                    title="학생 명렬표나 이름 목록을 복사하여 한 번에 일괄 등록합니다."
+                  >
+                    <Users size={14} /> 학생 명단 일괄 등록
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm btn-add-user"
+                    onClick={() => setIsAddUserOpen(true)}
+                    title="개별 신규 계정을 직접 등록합니다."
+                  >
+                    <UserPlus size={14} /> 단건 직접 등록
+                  </button>
+                </div>
               </div>
 
               {/* 회원 목록 테이블 */}
@@ -1652,6 +1688,138 @@ export default function StudentAdmin({
                   </button>
                   <button type="submit" className="btn btn-primary btn-sm">
                     계정 등록 완료
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* 모달 5: 학생 명단 일괄 등록 다이얼로그 */}
+        {/* ========================================================================= */}
+        {isBatchAddOpen && (
+          <div 
+            className="submodal-overlay" 
+            onMouseDown={handleOverlayMouseDown}
+            onMouseUp={createBackdropMouseUpHandler(() => setIsBatchAddOpen(false))}
+          >
+            <div className="submodal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+              <div className="submodal-header">
+                <div className="submodal-title-with-icon">
+                  <Users size={20} color="#059669" />
+                  <h4>학생 명단 한번에 일괄 등록</h4>
+                </div>
+                <button className="btn-close-submodal" onClick={() => setIsBatchAddOpen(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmBatchAdd}>
+                <div className="submodal-body">
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '0.84rem', color: '#166534', lineHeight: 1.5 }}>
+                    💡 <strong>간편 등록 안내</strong><br/>
+                    • <strong>아이디</strong>는 학생들의 <strong>이름</strong>으로 자동 지정됩니다.<br/>
+                    • <strong>초기 비밀번호</strong>는 <strong>1234</strong>로 통일되며, 접속 후 학생들이 직접 변경할 수 있습니다.<br/>
+                    • 엑셀 명렬표에서 학생 이름들을 복사해서 바로 붙여넣으세요.
+                  </div>
+
+                  <div className="form-row mt-2">
+                    <div className="form-group flex-1">
+                      <label>배정 학년</label>
+                      <select
+                        className="form-control"
+                        value={batchGrade}
+                        onChange={(e) => setBatchGrade(Number(e.target.value))}
+                      >
+                        {[1, 2, 3, 4, 5, 6].map((g) => (
+                          <option key={g} value={g}>{g}학년</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group flex-1">
+                      <label>배정 반</label>
+                      <select
+                        className="form-control"
+                        value={batchClassNum}
+                        onChange={(e) => setBatchClassNum(Number(e.target.value))}
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((c) => (
+                          <option key={c} value={c}>{c}반</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group mt-2">
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>학생 이름 목록 (명렬표 붙여넣기)</span>
+                      {parsedBatchStudents.length > 0 && (
+                        <span style={{ color: '#059669', fontWeight: 'bold' }}>
+                          총 {parsedBatchStudents.length}명 인식됨
+                        </span>
+                      )}
+                    </label>
+                    <textarea
+                      className="form-control"
+                      rows={6}
+                      placeholder={`학생 이름을 줄바꿈(엔터) 또는 쉼표(,)로 구분해 붙여넣으세요.\n\n예시:\n1. 김민준\n2. 이서아\n3. 박도윤\n4. 정하윤\n5. 최지호`}
+                      value={batchNamesText}
+                      onChange={(e) => setBatchNamesText(e.target.value)}
+                      style={{ resize: 'vertical', minHeight: '120px', fontFamily: 'inherit' }}
+                      autoFocus
+                    />
+                  </div>
+
+                  {parsedBatchStudents.length > 0 && (
+                    <div className="form-group mt-1">
+                      <label style={{ fontSize: '0.8rem', color: '#64748b' }}>생성될 계정 미리보기:</label>
+                      <div style={{
+                        maxHeight: '120px',
+                        overflowY: 'auto',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '6px'
+                      }}>
+                        {parsedBatchStudents.map((st, i) => (
+                          <span 
+                            key={i} 
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '6px',
+                              padding: '2px 8px',
+                              fontSize: '0.78rem',
+                              color: '#1e293b'
+                            }}
+                          >
+                            <strong>{st.name}</strong> <span style={{ color: '#64748b' }}>({st.username} / 1234)</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="submodal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setIsBatchAddOpen(false)}
+                  >
+                    취소
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary btn-sm"
+                    style={{ background: 'linear-gradient(135deg, #059669, #10b981)', border: 'none' }}
+                    disabled={parsedBatchStudents.length === 0}
+                  >
+                    {parsedBatchStudents.length > 0 ? `${parsedBatchStudents.length}명 일괄 등록 완료` : '학생 명단 등록'}
                   </button>
                 </div>
               </form>

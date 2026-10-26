@@ -33,7 +33,7 @@ import {
   INITIAL_CHANGE_REQUESTS,
   INITIAL_USERS
 } from './data/mockData';
-import { ShieldCheck, ArrowLeft, School, BookOpen, Edit, CheckCircle, Radio, GitFork, Settings, LogIn } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, School, BookOpen, Edit, CheckCircle, Radio, GitFork, Settings, LogIn, KeyRound } from 'lucide-react';
 
 const INITIAL_TEACHER_CHATS = {};
 
@@ -43,7 +43,16 @@ export default function App() {
   const [teachers, setTeachers] = useState(() => {
     try {
       const saved = localStorage.getItem('classtree_teachers');
-      return saved ? JSON.parse(saved) : TEACHER_HIERARCHY;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 이전 더미 교사 데이터(tch-1 김선생님 등) 정리
+        if (Array.isArray(parsed) && parsed.some((t) => t.id === 'tch-1')) {
+          const cleaned = parsed.filter((t) => t.id !== 'tch-1');
+          return cleaned;
+        }
+        return parsed;
+      }
+      return TEACHER_HIERARCHY;
     } catch {
       return TEACHER_HIERARCHY;
     }
@@ -134,7 +143,15 @@ export default function App() {
   const [users, setUsers] = useState(() => {
     try {
       const saved = localStorage.getItem('classtree_users');
-      return saved ? JSON.parse(saved) : INITIAL_USERS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // 더미 김선생님 계정(usr-tch-1), 샘플 학생 계정 필터링
+        const cleaned = (parsed || []).filter(
+          (u) => u && u.id !== 'usr-tch-1' && u.username !== 'teacher' && u.username !== 'sample_student'
+        );
+        return cleaned.length > 0 ? cleaned : INITIAL_USERS;
+      }
+      return INITIAL_USERS;
     } catch {
       return INITIAL_USERS;
     }
@@ -316,29 +333,19 @@ export default function App() {
   const [editingBoard, setEditingBoard] = useState(null);
 
   // Current Logged-in Student
-  const [currentStudent, setCurrentStudent] = useState(INITIAL_STUDENTS[0] || {
-    id: 'std-1',
-    name: '학생',
-    studentNo: '1번',
-    className: '우리 반',
-    group: '1조',
-    status: 'active'
-  });
+  const [currentStudent, setCurrentStudent] = useState(null);
   const [newRequestedName, setNewRequestedName] = useState('');
   const [profileRequestSuccess, setProfileRequestSuccess] = useState(false);
 
+  // 본인 비밀번호 변경 폼 상태
+  const [pwCurrentInput, setPwCurrentInput] = useState('');
+  const [pwNewInput, setPwNewInput] = useState('');
+  const [pwConfirmInput, setPwConfirmInput] = useState('');
+  const [pwChangeError, setPwChangeError] = useState('');
+  const [pwChangeSuccess, setPwChangeSuccess] = useState('');
+
   // 학생이 가입된 교실 목록 데이터 (동적 참여 가능하도록 state로 관리)
-  const [studentClassrooms, setStudentClassrooms] = useState([
-    {
-      id: 'cls-101',
-      name: '우리 반 교실',
-      teacherName: '김선생님',
-      teacherId: 'tch-1',
-      grade: '5학년',
-      code: 'CLS-501',
-      boards: TEACHER_HIERARCHY[0]?.classrooms?.[0]?.boards || []
-    }
-  ]);
+  const [studentClassrooms, setStudentClassrooms] = useState([]);
 
   // 학급 참여 인원 목록 및 역할 업데이트 핸들러
   const handleUpdateClassroomMembers = (classroomId, newMembers) => {
@@ -928,14 +935,23 @@ export default function App() {
     setCurrentRole(targetRole);
 
     if (targetRole === 'teacher') {
-      const matchedTeacher = teachers.find((t) => t.id === user.refId || t.name === user.name) || teachers[0];
+      let matchedTeacher = teachers.find((t) => t.id === user.refId || t.name === user.name || t.id === user.id);
+      if (!matchedTeacher) {
+        matchedTeacher = {
+          id: user.refId || user.id || `tch-${Date.now()}`,
+          name: user.name,
+          role: '교사',
+          color: '#4f46e5',
+          classrooms: []
+        };
+        setTeachers((prev) => [...prev, matchedTeacher]);
+      }
       setActiveTeacherId(matchedTeacher.id);
       setCurrentClassroom(matchedTeacher.classrooms?.[0] || null);
       setViewLevel('classrooms');
       setDisplayedLevel('classrooms');
     } else if (targetRole === 'student') {
-      const matchedStudent = students.find((s) => s.id === user.refId || s.name === user.name) || students[0];
-      setCurrentStudent(matchedStudent);
+      setCurrentStudent(user);
       setSelectedStudentClassroomId(null);
       setViewLevel('classrooms');
       setDisplayedLevel('welcome');
@@ -1119,6 +1135,75 @@ export default function App() {
     }, 2000);
   };
 
+  // 로그인된 본인 계정 비밀번호 변경 핸들러
+  const handleUpdateMyPassword = (e) => {
+    e.preventDefault();
+    setPwChangeError('');
+    setPwChangeSuccess('');
+
+    const targetUser = currentUser || currentStudent;
+    if (!targetUser) {
+      setPwChangeError('로그인 계정 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    if (!pwCurrentInput) {
+      setPwChangeError('현재 비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    // 현재 비밀번호 확인: 초기값 1234, targetUser.password, password123! 등
+    const isCurrentValid = (
+      pwCurrentInput === targetUser.password ||
+      pwCurrentInput === '1234' ||
+      pwCurrentInput === 'password123!'
+    );
+
+    if (!isCurrentValid) {
+      setPwChangeError('현재 비밀번호가 일치하지 않습니다. (초기 비밀번호: 1234)');
+      return;
+    }
+
+    if (!pwNewInput || pwNewInput.length < 4) {
+      setPwChangeError('새 비밀번호는 최소 4자리 이상 입력해 주세요.');
+      return;
+    }
+
+    if (pwNewInput !== pwConfirmInput) {
+      setPwChangeError('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+      return;
+    }
+
+    // 1. users 상태 갱신
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === targetUser.id || u.username === targetUser.username
+          ? { ...u, password: pwNewInput }
+          : u
+      )
+    );
+
+    // 2. currentUser 및 currentStudent 갱신
+    setCurrentUser((prev) => (prev ? { ...prev, password: pwNewInput } : null));
+    if (currentStudent) {
+      setCurrentStudent((prev) => (prev ? { ...prev, password: pwNewInput } : null));
+    }
+
+    // 3. Firestore 업데이트
+    if (targetUser.id) {
+      updateUserInFirestore(targetUser.id, { password: pwNewInput });
+    }
+
+    setPwChangeSuccess('비밀번호가 안전하게 변경되었습니다!');
+    setTimeout(() => {
+      setPwCurrentInput('');
+      setPwNewInput('');
+      setPwConfirmInput('');
+      setPwChangeSuccess('');
+      setShowStudentProfileModal(false);
+    }, 1500);
+  };
+
   // 현재 차시(수업 흐름도, 노드, 엣지, 포스트) 저장 핸들러
   const handleSaveCurrentBoard = () => {
     if (!currentBoard || !currentClassroom) return;
@@ -1205,6 +1290,7 @@ export default function App() {
         onOpenRegister={() => setIsRegisterModalOpen(true)}
         onLogout={handleLogout}
         onGoHome={handleGoHome}
+        onOpenProfile={() => setShowStudentProfileModal(true)}
         pendingCount={users.filter((u) => u.status === 'pending').length}
       />
 
@@ -1265,7 +1351,7 @@ export default function App() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span className="live-pulse-dot"></span>
                 <span>
-                  접속 학생: <strong>{currentStudent.name}</strong> ({currentStudent.studentNo} / {currentStudent.className} {currentStudent.group})
+                  접속 학생: <strong>{currentStudent?.name || currentUser?.name || '학생'}</strong> ({currentStudent?.detail || currentUser?.detail || '학생 계정'})
                 </span>
                 {lessonMode === 'guided' && (
                   <span className="live-sync-indicator">
@@ -1275,10 +1361,10 @@ export default function App() {
               </div>
               <button 
                 className="btn btn-secondary btn-sm"
-                style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}
+                style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                 onClick={() => setShowStudentProfileModal(true)}
               >
-                <Edit size={12} /> 개인정보 변경
+                <KeyRound size={12} /> 비밀번호 변경
               </button>
             </div>
           )}
@@ -1534,43 +1620,97 @@ export default function App() {
     </div>
 
       {/* 모달들 */}
+      {/* 내 계정 정보 & 비밀번호 변경 모달 */}
       {showStudentProfileModal && (
         <div 
           className="modal-overlay" 
           onMouseDown={handleProfileOverlayMouseDown}
           onMouseUp={handleProfileOverlayMouseUp}
         >
-          <div className="modal-content" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content" style={{ maxWidth: '440px', borderRadius: '20px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span className="modal-title">개인정보 변경 요청</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowStudentProfileModal(false)}>취소</button>
+              <span className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <KeyRound size={18} color="#6366f1" />
+                내 계정 정보 & 비밀번호 변경
+              </span>
+              <button 
+                type="button"
+                className="btn-close-modal" 
+                onClick={() => setShowStudentProfileModal(false)}
+                aria-label="닫기"
+              >
+                ✕
+              </button>
             </div>
-            <form onSubmit={handleSubmitProfileChange}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">현재 학번 및 이름</label>
+            
+            <form onSubmit={handleUpdateMyPassword}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* 현재 계정 정보 박스 */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '4px' }}>접속 계정</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a' }}>
+                    {currentUser?.name || currentStudent?.name || '사용자'} 
+                    <span style={{ fontSize: '0.82rem', fontWeight: 'normal', color: '#6366f1', marginLeft: '6px' }}>
+                      (@{currentUser?.username || currentStudent?.username || ''})
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '3px' }}>
+                    {currentUser?.detail || currentStudent?.detail || ''}
+                  </div>
+                </div>
+
+                {pwChangeError && (
+                  <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 12px', color: '#dc2626', fontSize: '0.85rem' }}>
+                    {pwChangeError}
+                  </div>
+                )}
+
+                {pwChangeSuccess && (
+                  <div style={{ background: '#dcfce7', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 12px', color: '#166534', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                    ✓ {pwChangeSuccess}
+                  </div>
+                )}
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: '700', fontSize: '0.82rem', color: '#334155' }}>현재 비밀번호</label>
                   <input 
-                    type="text" 
-                    className="form-input" 
-                    value={`${currentStudent.studentNo} ${currentStudent.name}`} 
-                    disabled 
-                    style={{ background: '#f1f5f9' }} 
+                    type="password" 
+                    className="form-control" 
+                    placeholder="현재 비밀번호 입력 (초기값: 1234)" 
+                    value={pwCurrentInput}
+                    onChange={(e) => setPwCurrentInput(e.target.value)}
+                    required
                   />
                 </div>
-                <div className="form-group">
-                  <label className="form-label">변경 희망 이름</label>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: '700', fontSize: '0.82rem', color: '#334155' }}>새 비밀번호</label>
                   <input
-                    type="text"
-                    className="form-input"
-                    value={newRequestedName}
-                    onChange={(e) => setNewRequestedName(e.target.value)}
+                    type="password"
+                    className="form-control"
+                    placeholder="새로 사용할 비밀번호 (4자 이상)"
+                    value={pwNewInput}
+                    onChange={(e) => setPwNewInput(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: '700', fontSize: '0.82rem', color: '#334155' }}>새 비밀번호 확인</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="새 비밀번호 다시 한 번 입력"
+                    value={pwConfirmInput}
+                    onChange={(e) => setPwConfirmInput(e.target.value)}
                     required
                   />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowStudentProfileModal(false)}>닫기</button>
-                <button type="submit" className="btn btn-primary">변경 요청</button>
+
+              <div className="modal-footer" style={{ borderTop: '1px solid #f1f5f9', background: '#f8fafc', padding: '12px 18px', borderBottomLeftRadius: '20px', borderBottomRightRadius: '20px' }}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowStudentProfileModal(false)}>취소</button>
+                <button type="submit" className="btn btn-primary btn-sm">비밀번호 변경 완료</button>
               </div>
             </form>
           </div>

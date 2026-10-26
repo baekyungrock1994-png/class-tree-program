@@ -14,7 +14,7 @@ export const INITIAL_LESSON = {
   waitingRoomEnabled: false,
 };
 
-// 1. 기본 수업 시작 노드 (더미 데이터 삭제 후 1단계 스타터 노드만 유지)
+// 신규 보드 생성 시 사용할 1단계 기본 시작 노드 템플릿
 export const WEATHER_FLOW_NODES = [
   {
     id: 'node-1',
@@ -37,47 +37,16 @@ export const WEATHER_EDGES = [];
 export const WEATHER_POSTS = [];
 export const NEWSPAPER_CANVAS_POSTS = [];
 
-// 2. 선생님 -> 교실 -> 보드 기본 계층 구조
-export const TEACHER_HIERARCHY = [
-  {
-    id: 'tch-1',
-    name: '김선생님',
-    role: '교사',
-    color: '#4f46e5',
-    classrooms: [
-      {
-        id: 'cls-101',
-        name: '우리 반 교실',
-        grade: '5학년',
-        code: 'CLS-501',
-        members: [
-          { id: 'tch-1', name: '김선생님', username: 'teacher', role: 'owner', email: 'teacher@school.edu' }
-        ],
-        boards: [
-          {
-            id: 'brd-1',
-            title: '1단원: 첫 번째 수업 탐구',
-            mode: 'guided',
-            nodes: WEATHER_FLOW_NODES,
-            edges: WEATHER_EDGES,
-            posts: [],
-            sections: ['학생 발표', '선생님 자료'],
-            activeStageId: 'node-1',
-            liveStageId: 'node-1'
-          }
-        ]
-      }
-    ]
-  }
-];
+// 2. 선생님 -> 교실 -> 보드 기본 계층 구조 (더미 교실 및 더미 교사 제거)
+export const TEACHER_HIERARCHY = [];
 
-// 더미 학생 목록 삭제 완료 (빈 배열)
+// 학생 목록 (빈 배열)
 export const INITIAL_STUDENTS = [];
 
-// 더미 정보 변경 요청 목록 삭제 완료 (빈 배열)
+// 정보 변경 요청 목록 (빈 배열)
 export const INITIAL_CHANGE_REQUESTS = [];
 
-// 4. 회원 계정 목록 (더미 가상 학생/신청자 제거, 최고 관리자 및 기본 교사 계정만 보존)
+// 4. 회원 계정 목록 (더미 교사 및 가상 학생 계정 모두 삭제, 최고 관리자 계정만 유지)
 export const INITIAL_USERS = [
   {
     id: 'usr-admin',
@@ -85,18 +54,7 @@ export const INITIAL_USERS = [
     username: 'admin',
     password: 'password123!',
     role: 'admin',
-    detail: 'ClassTree 최고 관리자 마스터 계정',
-    joinedDate: '2026-03-01',
-    status: 'active'
-  },
-  {
-    id: 'usr-tch-1',
-    refId: 'tch-1',
-    name: '김선생님',
-    username: 'teacher',
-    password: 'password123!',
-    role: 'teacher',
-    detail: '담당 교사',
+    detail: 'ClassTree 시스템 총괄 관리자',
     joinedDate: '2026-03-01',
     status: 'active'
   }

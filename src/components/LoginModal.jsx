@@ -124,45 +124,7 @@ export default function LoginModal({
     }
   };
 
-  // 원클릭 빠른 체험 로그인
-  const handleQuickLogin = (roleType) => {
-    setErrorMessage('');
-    if (roleType === 'admin') {
-      const adminUser = {
-        id: 'usr-admin',
-        name: '최고 관리자',
-        username: 'admin',
-        role: 'admin',
-        detail: '시스템 총괄 관리자 (체험용)',
-        status: 'active'
-      };
-      onLoginSuccess(adminUser, 'admin');
-      onClose();
-    } else if (roleType === 'student') {
-      const studentUser = {
-        id: 'usr-std-sample',
-        name: '학생',
-        studentNo: '50101',
-        username: 'sample_student',
-        role: 'student',
-        detail: '5학년 1반 1번 (체험용 학생)',
-        status: 'active'
-      };
-      onLoginSuccess(studentUser, 'student');
-      onClose();
-    } else {
-      const teacherUser = users.find((u) => u.role === 'teacher' && u.status === 'active') || {
-        id: 'usr-tch-1',
-        name: '김선생님',
-        username: 'teacher',
-        role: 'teacher',
-        detail: '담당 교사 (체험용 샘플)',
-        status: 'active'
-      };
-      onLoginSuccess(teacherUser, 'teacher');
-      onClose();
-    }
-  };
+
 
   return (
     <div 
@@ -248,13 +210,13 @@ export default function LoginModal({
         {/* 로그인 폼 */}
         <form onSubmit={handleSubmit} className="login-form-body">
           <div className="form-group">
-            <label className="login-field-label">아이디 (Username)</label>
+            <label className="login-field-label">아이디 (또는 학생 이름)</label>
             <div className="login-input-wrap">
               <User size={16} className="login-input-icon" />
               <input
                 type="text"
                 className="login-input"
-                placeholder="아이디를 입력하세요 (예: teacher 또는 admin)"
+                placeholder="아이디 또는 학생 이름을 입력하세요"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
                 autoFocus
@@ -274,68 +236,14 @@ export default function LoginModal({
                 onChange={(e) => setPasswordInput(e.target.value)}
               />
             </div>
-            <span className="login-pw-hint">* 기본 비밀번호는 <code>1234</code> 또는 <code>password123!</code> 입니다.</span>
+            <span className="login-pw-hint">* 학생 초기 비밀번호: <code>1234</code> (나중에 직접 변경 가능)</span>
           </div>
 
           <button type="submit" className="btn-login-submit mt-4">
-            <span>아이디로 접속</span>
+            <span>로그인 접속</span>
             <ArrowRight size={16} />
           </button>
         </form>
-
-        {/* 빠른 간편 체험 로그인 버튼들 */}
-        <div className="login-quick-section">
-          <div className="login-divider">
-            <span>빠른 테스트 접속 (체험용 샘플)</span>
-          </div>
-
-          <div className="quick-login-btn-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            <button
-              type="button"
-              className="quick-login-tile teacher"
-              onClick={() => handleQuickLogin('teacher')}
-              title="김선생님 샘플 계정으로 즉시 접속"
-            >
-              <div className="tile-icon-wrap teacher">
-                <GraduationCap size={15} />
-              </div>
-              <div className="tile-text-wrap">
-                <strong className="tile-name">김선생님</strong>
-                <span className="tile-role">샘플 교사</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="quick-login-tile student"
-              onClick={() => handleQuickLogin('student')}
-              title="체험용 학생 계정으로 즉시 접속"
-            >
-              <div className="tile-icon-wrap student">
-                <School size={15} />
-              </div>
-              <div className="tile-text-wrap">
-                <strong className="tile-name">학생</strong>
-                <span className="tile-role">체험 학생</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              className="quick-login-tile admin"
-              onClick={() => handleQuickLogin('admin')}
-              title="최고 관리자 계정으로 즉시 접속"
-            >
-              <div className="tile-icon-wrap admin">
-                <ShieldCheck size={15} />
-              </div>
-              <div className="tile-text-wrap">
-                <strong className="tile-name">관리자</strong>
-                <span className="tile-role">관리자 콘솔</span>
-              </div>
-            </button>
-          </div>
-        </div>
 
         {/* 회원가입 링크 */}
         <div className="login-register-footer">

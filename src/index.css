@@ -7178,6 +7178,316 @@ button, input, select, textarea {
 }
 
 /* =========================================================================
+   관리자 콘솔: 서브모달 다이얼로그 (신규 회원 등록, 비밀번호 변경, 학급 이동 등)
+   ========================================================================= */
+
+@keyframes submodalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes submodalScaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.submodal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2100;
+  padding: 1.25rem;
+  animation: submodalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.submodal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: submodalScaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.submodal-header {
+  padding: 1.15rem 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.submodal-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.submodal-title-with-icon h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.btn-close-submodal {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.btn-close-submodal:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: scale(1.05);
+}
+
+.submodal-body {
+  padding: 1.35rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.submodal-footer {
+  padding: 1rem 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  background: #f8fafc;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+/* 역할 선택 (학생 / 교사) 세그먼트 라디오 카드 */
+.role-radio-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.role-radio-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.role-radio-label input[type="radio"] {
+  accent-color: #6366f1;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.role-radio-label:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.role-radio-label.active,
+.role-radio-label:has(input:checked) {
+  border-color: #6366f1;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.15);
+}
+
+/* 폼 요소 및 레이아웃 */
+.form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  display: block;
+}
+
+.form-control {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: #0f172a;
+  background: #ffffff;
+  transition: all 0.16s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-control:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14);
+  background: #ffffff;
+}
+
+.form-control::placeholder {
+  color: #94a3b8;
+}
+
+select.form-control {
+  cursor: pointer;
+  background-color: #ffffff;
+}
+
+.form-hint {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-top: 4px;
+  display: block;
+}
+
+.target-user-info-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.user-role-text {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+/* 모달 전용 버튼 유틸리티 */
+.submodal-footer .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.submodal-footer .btn-secondary {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.submodal-footer .btn-secondary:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.submodal-footer .btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.submodal-footer .btn-primary:hover {
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+  transform: translateY(-1px);
+}
+
+.submodal-footer .btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.submodal-footer .btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-3 {
+  margin-top: 0.75rem;
+}
+
+/* =========================================================================
    상단 네비바: 로그인 및 사용자 프로필 섹션 (Apple Style)
    ========================================================================= */
 .nav-actions {
