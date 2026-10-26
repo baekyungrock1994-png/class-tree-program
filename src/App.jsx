@@ -21,6 +21,8 @@ import {
   subscribeBoardPosts,
   subscribeUsers,
   saveUserToFirestore,
+  updateUserInFirestore,
+  deleteUserFromFirestore,
   saveClassroomToFirestore,
   deleteClassroomFromFirestore,
   subscribeClassrooms,
@@ -621,6 +623,76 @@ export default function App() {
 
     // Firestore에서도 영구 삭제 (삭제하지 않으면 다음 실시간 동기화 때 다시 나타남)
     deleteClassroomFromFirestore(classroom.id);
+  };
+
+  // 관리자 전용: 교사 완전 삭제 (해당 교사 소속 모든 교실·계정을 함께 정리)
+  // teachers 배열에만 존재하고 users 계정이 없는 레거시/동기화 교사 항목도 처리 가능
+  const handleDeleteTeacher = (teacherId) => {
+    if (!teacherId) return;
+    const teacher = teachers.find((t) => t.id === teacherId);
+    if (!teacher) return;
+
+    const confirmMsg = `정말 '${teacher.name}' 선생님 계정을 완전히 삭제하시겠습니까?\n소속된 모든 학급(${teacher.classrooms?.length || 0}개)과 수업, 계정 정보가 함께 영구 삭제됩니다.`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    const classroomIds = (teacher.classrooms || []).map((c) => c.id);
+
+    // 1. Firestore에서 이 교사의 모든 학급 영구 삭제
+    classroomIds.forEach((id) => deleteClassroomFromFirestore(id));
+
+    // 2. 로컬 teachers 목록에서 제거
+    setTeachers((prev) => prev.filter((t) => t.id !== teacherId));
+
+    // 3. 학생이 가입해 있던 교실 목록에서도 정리
+    setStudentClassrooms((prev) => prev.filter((c) => !classroomIds.includes(c.id)));
+
+    // 4. 현재 보고 있던 교사/교실이었다면 선택 해제
+    if (activeTeacherId === teacherId) {
+      setActiveTeacherId(null);
+      setCurrentClassroom(null);
+    }
+
+    // 5. 연결된 users 계정이 있다면 함께 삭제 (Firestore + 로컬)
+    const linkedUser = users.find((u) => u.refId === teacherId || u.id === teacherId);
+    if (linkedUser) {
+      setUsers((prev) => prev.filter((u) => u.id !== linkedUser.id));
+      deleteUserFromFirestore(linkedUser.id);
+    }
+  };
+
+  // 관리자 전용: 교사 이름 수정 (오탈자 보정 등). 소속 학급들의 teacherName 및 연결 계정 이름도 함께 동기화
+  const handleRenameTeacher = (teacherId, rawName) => {
+    const newName = (rawName || '').trim();
+    if (!teacherId || !newName) return;
+
+    const teacher = teachers.find((t) => t.id === teacherId);
+    if (!teacher) return;
+
+    setTeachers((prev) =>
+      prev.map((t) =>
+        t.id === teacherId
+          ? {
+              ...t,
+              name: newName,
+              classrooms: (t.classrooms || []).map((c) => ({ ...c, teacherName: newName }))
+            }
+          : t
+      )
+    );
+
+    (teacher.classrooms || []).forEach((c) => {
+      saveClassroomToFirestore({ ...c, teacherName: newName });
+    });
+
+    const linkedUser = users.find((u) => u.refId === teacherId || u.id === teacherId);
+    if (linkedUser) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === linkedUser.id ? { ...u, name: newName } : u))
+      );
+      updateUserInFirestore(linkedUser.id, { name: newName });
+    }
   };
 
   // 수업 차시 정보 수정 저장 핸들러
@@ -1821,6 +1893,8 @@ export default function App() {
         setUsers={setUsers}
         teachers={teachers}
         setTeachers={setTeachers}
+        onDeleteTeacher={handleDeleteTeacher}
+        onRenameTeacher={handleRenameTeacher}
         students={students}
         setStudents={setStudents}
         changeRequests={changeRequests}

@@ -33,6 +33,8 @@ export default function StudentAdmin({
   setUsers,
   teachers = [],
   setTeachers,
+  onDeleteTeacher,
+  onRenameTeacher,
   students = [],
   setStudents,
   changeRequests = [],
@@ -58,6 +60,11 @@ export default function StudentAdmin({
   // 아이디(Username) 인라인 수정 상태
   const [editingUserId, setEditingUserId] = useState(null);
   const [editUsernameInput, setEditUsernameInput] = useState('');
+
+  // 선생님 보드 관리 탭: 교사 이름 인라인 수정 상태
+  const [editingTeacherId, setEditingTeacherId] = useState(null);
+  const [editTeacherNameInput, setEditTeacherNameInput] = useState('');
+  const [teacherSearchQuery, setTeacherSearchQuery] = useState('');
 
   // 비밀번호 직접 변경 모달/상태
   const [pwTargetUser, setPwTargetUser] = useState(null);
@@ -326,6 +333,25 @@ export default function StudentAdmin({
     showToast(`계정 아이디가 '${trimmed}'(으)로 변경되었습니다.`);
   };
 
+  // 선생님 보드 관리: 교사 이름 인라인 수정
+  const handleStartEditTeacherName = (teacher) => {
+    setEditingTeacherId(teacher.id);
+    setEditTeacherNameInput(teacher.name);
+  };
+
+  const handleSaveTeacherName = (teacherId) => {
+    if (!editTeacherNameInput.trim()) return;
+    if (onRenameTeacher) onRenameTeacher(teacherId, editTeacherNameInput.trim());
+    setEditingTeacherId(null);
+    showToast(`선생님 성함이 '${editTeacherNameInput.trim()}'(으)로 수정되었습니다.`);
+  };
+
+  const filteredTeachers = teachers.filter((t) => {
+    const q = teacherSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (t.name || '').toLowerCase().includes(q) || (t.id || '').toLowerCase().includes(q);
+  });
+
   // 권한(교사 <-> 학생) 변경
   const handleToggleUserRole = (user) => {
     const nextRole = user.role === 'teacher' ? 'student' : 'teacher';
@@ -374,11 +400,22 @@ export default function StudentAdmin({
   };
 
   // 사용자 삭제
-  const handleDeleteUser = (userId, userName) => {
-    if (!window.confirm(`정말 [${userName}] 사용자를 삭제(탈퇴) 처리하시겠습니까?`)) return;
-    setUsers((prev) => prev.filter((u) => u.id !== userId));
-    deleteUserFromFirestore(userId);
-    showToast(`[${userName}] 계정이 정상적으로 삭제되었습니다.`);
+  const handleDeleteUser = (user) => {
+    if (!user) return;
+
+    // 교사 계정이고 선생님 보드(teachers)에도 등록되어 있다면, 소속 학급까지 한 번에 완전 삭제
+    if (user.role === 'teacher') {
+      const matchedTeacher = teachers.find((t) => t.id === user.refId || t.name === user.name);
+      if (matchedTeacher && onDeleteTeacher) {
+        onDeleteTeacher(matchedTeacher.id);
+        return;
+      }
+    }
+
+    if (!window.confirm(`정말 [${user.name}] 사용자를 삭제(탈퇴) 처리하시겠습니까?`)) return;
+    setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    deleteUserFromFirestore(user.id);
+    showToast(`[${user.name}] 계정이 정상적으로 삭제되었습니다.`);
   };
 
   // 신규 사용자 직접 등록
@@ -595,6 +632,15 @@ export default function StudentAdmin({
           </button>
 
           <button
+            className={`admin-tab-btn ${activeTab === 'teacherBoards' ? 'active' : ''}`}
+            onClick={() => setActiveTab('teacherBoards')}
+          >
+            <GraduationCap size={16} />
+            <span>선생님 보드 관리</span>
+            <span className="tab-count-pill">{teachers.length}</span>
+          </button>
+
+          <button
             className={`admin-tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
             onClick={() => setActiveTab('pending')}
           >
@@ -630,6 +676,140 @@ export default function StudentAdmin({
 
         {/* 모달 본문 */}
         <div className="modal-body admin-modal-body">
+          {/* ========================================================================= */}
+          {/* TAB: 선생님 보드 관리 (users 계정 유무와 무관하게 teachers 전체를 관리) */}
+          {/* ========================================================================= */}
+          {activeTab === 'teacherBoards' && (
+            <div className="teacher-boards-management-view">
+              <div className="admin-tab-header-row">
+                <div>
+                  <h3 className="admin-section-title">선생님 보드 전체 관리</h3>
+                  <p className="admin-section-desc">
+                    좌측 사이드바(선생님 보드)에 표시되는 모든 교사를 계정 연동 여부와 상관없이 직접 관리합니다.
+                    이름 오탈자 수정, 또는 계정과 소속 학급 전체를 영구 삭제할 수 있습니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="admin-search-wrap" style={{ marginBottom: '14px' }}>
+                <Search size={15} />
+                <input
+                  type="text"
+                  placeholder="선생님 성함 또는 ID 검색..."
+                  value={teacherSearchQuery}
+                  onChange={(e) => setTeacherSearchQuery(e.target.value)}
+                />
+                {teacherSearchQuery && (
+                  <button className="clear-search-btn" onClick={() => setTeacherSearchQuery('')}>
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th style={{ minWidth: '140px' }}>선생님 성함</th>
+                      <th style={{ minWidth: '120px' }}>교사 ID</th>
+                      <th style={{ minWidth: '100px' }}>계정 연동</th>
+                      <th style={{ minWidth: '100px' }}>소속 학급 수</th>
+                      <th style={{ textAlign: 'right', minWidth: '160px' }}>관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTeachers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-4">
+                          조건에 부합하는 선생님이 없습니다.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTeachers.map((teacher) => {
+                        const linkedUser = users.find(
+                          (u) => u.refId === teacher.id || u.id === teacher.id
+                        );
+                        return (
+                          <tr key={teacher.id}>
+                            <td>
+                              {editingTeacherId === teacher.id ? (
+                                <div className="inline-edit-username-wrap">
+                                  <input
+                                    type="text"
+                                    className="inline-username-input"
+                                    value={editTeacherNameInput}
+                                    onChange={(e) => setEditTeacherNameInput(e.target.value)}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleSaveTeacherName(teacher.id);
+                                      if (e.key === 'Escape') setEditingTeacherId(null);
+                                    }}
+                                  />
+                                  <button
+                                    className="btn-icon-save"
+                                    onClick={() => handleSaveTeacherName(teacher.id)}
+                                    title="저장"
+                                  >
+                                    <Check size={14} />
+                                  </button>
+                                  <button
+                                    className="btn-icon-cancel"
+                                    onClick={() => setEditingTeacherId(null)}
+                                    title="취소"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="username-display-wrap">
+                                  <strong className="user-name-text">{teacher.name}</strong>
+                                  <button
+                                    className="btn-edit-inline"
+                                    onClick={() => handleStartEditTeacherName(teacher)}
+                                    title="성함 수정"
+                                  >
+                                    <Edit3 size={12} />
+                                    <span>수정</span>
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <code className="user-id-code">{teacher.id}</code>
+                            </td>
+                            <td>
+                              {linkedUser ? (
+                                <span className="status-badge active">
+                                  <Check size={11} /> 연동됨
+                                </span>
+                              ) : (
+                                <span className="status-badge pending">
+                                  <Clock size={11} /> 계정 없음
+                                </span>
+                              )}
+                            </td>
+                            <td>{teacher.classrooms?.length || 0}개</td>
+                            <td style={{ textAlign: 'right' }}>
+                              <div className="table-actions-right">
+                                <button
+                                  className="btn-icon-trash"
+                                  onClick={() => onDeleteTeacher && onDeleteTeacher(teacher.id)}
+                                  title="선생님 계정 및 소속 학급 전체 삭제"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* ========================================================================= */}
           {/* TAB 1: 가입 승인 / 반려 대기 탭 */}
           {/* ========================================================================= */}
@@ -765,7 +945,7 @@ export default function StudentAdmin({
                           </button>
                           <button
                             className="btn btn-outline-danger btn-xs"
-                            onClick={() => handleDeleteUser(rej.id, rej.name)}
+                            onClick={() => handleDeleteUser(rej)}
                           >
                             완전 삭제
                           </button>
@@ -1250,7 +1430,7 @@ export default function StudentAdmin({
                                 )}
                                 <button
                                   className="btn-icon-trash"
-                                  onClick={() => handleDeleteUser(user.id, user.name)}
+                                  onClick={() => handleDeleteUser(user)}
                                   title="계정 삭제"
                                 >
                                   <Trash2 size={14} />
