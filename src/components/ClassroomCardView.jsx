@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  School, 
-  BookOpen, 
-  Users, 
-  ArrowRight, 
-  Plus, 
-  KeyRound, 
-  Copy, 
-  Check, 
-  ShieldCheck,
-  UserCheck,
+import { useState, useEffect, useRef } from 'react';
+import {
+  School,
+  BookOpen,
+  Users,
+  ArrowRight,
+  Plus,
+  KeyRound,
+  Copy,
+  Check,
   Pencil,
   Trash2,
   Maximize2,

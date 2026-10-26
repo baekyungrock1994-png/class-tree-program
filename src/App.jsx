@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import TimerControl from './components/TimerControl';
 import FlowCanvas from './components/FlowCanvas';
@@ -17,23 +17,23 @@ import StudentAdmin from './components/StudentAdmin';
 import LoginModal from './components/LoginModal';
 import RegisterModal from './components/RegisterModal';
 import TimerExpireCelebrationModal from './components/TimerExpireCelebrationModal';
-import { 
-  subscribeBoardPosts, 
-  subscribeUsers, 
+import {
+  subscribeBoardPosts,
+  subscribeUsers,
   saveUserToFirestore,
   saveClassroomToFirestore,
+  deleteClassroomFromFirestore,
   subscribeClassrooms,
   findClassroomByCodeInFirestore
 } from './services/firebaseService';
 import { logoutFirebase, onAuthListener } from './services/firebaseAuthService';
-import { 
-  INITIAL_LESSON, 
+import {
   TEACHER_HIERARCHY,
-  INITIAL_STUDENTS, 
+  INITIAL_STUDENTS,
   INITIAL_CHANGE_REQUESTS,
   INITIAL_USERS
 } from './data/mockData';
-import { ShieldCheck, ArrowLeft, School, BookOpen, Edit, CheckCircle, Radio, GitFork, Settings, LogIn, KeyRound } from 'lucide-react';
+import { ArrowLeft, Radio, GitFork, Settings, LogIn, KeyRound } from 'lucide-react';
 
 const INITIAL_TEACHER_CHATS = {};
 
@@ -202,17 +202,19 @@ export default function App() {
   }, []);
 
   // Firebase Firestore 실시간 학급(교실: classrooms) 구독
+  // 주의: teacherId가 로컬 teachers 목록에 없는 교실(다른 기기에서 가입·개설된 교사의 교실)도
+  // 누락 없이 교사 항목을 새로 만들어 반영해야 관리자가 모든 교사의 교실을 보고 관리할 수 있다.
   useEffect(() => {
     const unsubscribe = subscribeClassrooms(
       (firestoreClassrooms) => {
         if (firestoreClassrooms && firestoreClassrooms.length > 0) {
           setTeachers((prevTeachers) => {
-            return prevTeachers.map((teacher) => {
+            const nextTeachers = prevTeachers.map((teacher) => {
               const teacherRooms = firestoreClassrooms.filter(
                 (c) => c.teacherId === teacher.id || c.members?.some((m) => m.id === teacher.id && m.role === 'owner')
               );
               if (teacherRooms.length === 0) return teacher;
-              
+
               const existingMap = new Map((teacher.classrooms || []).map((c) => [c.id, c]));
               const mergedRooms = [...(teacher.classrooms || [])];
               teacherRooms.forEach((r) => {
@@ -225,6 +227,29 @@ export default function App() {
               });
               return { ...teacher, classrooms: mergedRooms };
             });
+
+            // 로컬 teachers 목록에 전혀 없는 teacherId를 가진 교실 -> 새 교사 항목 생성
+            const knownTeacherIds = new Set(nextTeachers.map((t) => t.id));
+            const orphanRoomsByTeacher = new Map();
+            firestoreClassrooms.forEach((room) => {
+              if (!room.teacherId || knownTeacherIds.has(room.teacherId)) return;
+              if (!orphanRoomsByTeacher.has(room.teacherId)) {
+                orphanRoomsByTeacher.set(room.teacherId, []);
+              }
+              orphanRoomsByTeacher.get(room.teacherId).push(room);
+            });
+
+            const newTeachers = Array.from(orphanRoomsByTeacher.entries()).map(
+              ([teacherId, rooms]) => ({
+                id: teacherId,
+                name: rooms[0]?.teacherName || '담당 교사',
+                role: '교사',
+                color: '#3b82f6',
+                classrooms: rooms
+              })
+            );
+
+            return newTeachers.length > 0 ? [...nextTeachers, ...newTeachers] : nextTeachers;
           });
         }
       },
@@ -308,7 +333,6 @@ export default function App() {
 
   // Modals
   const [isStudentAdminOpen, setIsStudentAdminOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
   const [showStudentProfileModal, setShowStudentProfileModal] = useState(false);
   const [isTimerCelebrationOpen, setIsTimerCelebrationOpen] = useState(false);
 
@@ -594,6 +618,9 @@ export default function App() {
       const remaining = (currentTeacher?.classrooms || []).filter((c) => c.id !== classroom.id);
       setCurrentClassroom(remaining[0] || null);
     }
+
+    // Firestore에서도 영구 삭제 (삭제하지 않으면 다음 실시간 동기화 때 다시 나타남)
+    deleteClassroomFromFirestore(classroom.id);
   };
 
   // 수업 차시 정보 수정 저장 핸들러
@@ -989,7 +1016,6 @@ export default function App() {
     // 2. 열려 있는 각종 보조 창 및 팝업 상태 닫기
     setCanvasExpanded(false);
     setIsStudentAdminOpen(false);
-    setIsExportOpen(false);
     setShowStudentProfileModal(false);
     setEditingBoard(null);
     setEditingClassroom(null);

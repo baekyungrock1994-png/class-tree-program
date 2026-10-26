@@ -1,16 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { 
-  Users, 
-  X, 
-  Copy, 
-  Check, 
-  ShieldCheck, 
-  GraduationCap, 
-  UserPlus, 
-  Trash2, 
-  KeyRound, 
-  Sparkles,
-  ArrowLeftRight
+import { useState, useRef } from 'react';
+import {
+  Users,
+  X,
+  Copy,
+  Check,
+  ShieldCheck,
+  GraduationCap,
+  UserPlus,
+  Trash2,
+  KeyRound,
+  Sparkles
 } from 'lucide-react';
 
 export default function ClassroomMembersModal({

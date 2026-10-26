@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Palette, Eraser, RotateCcw, Check, X } from 'lucide-react';
 
 export default function DrawingModal({ isOpen, onClose, onSave }) {

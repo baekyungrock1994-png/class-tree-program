@@ -1,13 +1,9 @@
-import React from 'react';
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Compass, 
-  Grid, 
-  Plus, 
-  Layers, 
-  Clock, 
-  Sparkles,
+import {
+  ArrowLeft,
+  ArrowRight,
+  Compass,
+  Grid,
+  Plus,
   School,
   Pencil,
   Trash2

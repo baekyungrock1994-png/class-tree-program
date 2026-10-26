@@ -1,18 +1,16 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { 
-  GitFork, 
-  X, 
-  User, 
-  Lock, 
-  GraduationCap, 
-  School, 
-  CheckCircle2, 
-  AlertCircle, 
+import { useState, useMemo, useRef } from 'react';
+import {
+  GitFork,
+  X,
+  User,
+  Lock,
+  GraduationCap,
+  School,
+  CheckCircle2,
+  AlertCircle,
   ArrowRight,
   Sparkles,
-  ShieldCheck,
-  Building,
-  BookOpen
+  ShieldCheck
 } from 'lucide-react';
 
 export default function RegisterModal({

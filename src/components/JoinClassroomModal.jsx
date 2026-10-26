@@ -1,15 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { 
-  KeyRound, 
-  X, 
-  School, 
-  CheckCircle2, 
-  ArrowRight, 
-  Users, 
-  Copy, 
-  Check, 
-  ShieldCheck, 
-  AlertCircle 
+import { useState, useRef } from 'react';
+import {
+  KeyRound,
+  X,
+  CheckCircle2,
+  ArrowRight,
+  Users,
+  Copy,
+  Check,
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
 
 export default function JoinClassroomModal({

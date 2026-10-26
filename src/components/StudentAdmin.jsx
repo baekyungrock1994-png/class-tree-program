@@ -1,37 +1,29 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  UserCheck, 
-  KeyRound, 
-  UserX, 
-  Check, 
-  X, 
-  AlertCircle, 
-  ShieldCheck, 
+import { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  KeyRound,
+  Check,
+  X,
+  ShieldCheck,
   RefreshCw,
   Search,
-  Plus,
   Edit3,
   GraduationCap,
   School,
   UserPlus,
-  Lock,
   ArrowRightLeft,
   Trash2,
   Clock,
   CheckCircle2,
   XCircle,
-  Filter,
   Users,
-  Layers,
   LayoutGrid,
-  List,
-  Sparkles,
-  ChevronRight
+  List
 } from 'lucide-react';
-import { 
-  updateUserInFirestore, 
-  deleteUserFromFirestore, 
-  saveUserToFirestore 
+import {
+  updateUserInFirestore,
+  deleteUserFromFirestore,
+  saveUserToFirestore,
+  saveClassroomToFirestore
 } from '../services/firebaseService';
 
 export default function StudentAdmin({
@@ -135,23 +127,30 @@ export default function StudentAdmin({
       const exists = teachers.some((t) => t.name === user.name || t.id === user.refId);
       if (!exists) {
         const teacherId = user.refId || `tch-${Date.now().toString().slice(-4)}`;
+        const teacherName = user.name.endsWith('T') ? user.name : `${user.name}T`;
+        const firstClassroom = {
+          id: `cls-${Date.now()}`,
+          teacherId,
+          teacherName,
+          name: `${user.name} 선생님의 첫 번째 교실`,
+          grade: '일반',
+          code: `CLS-${Math.floor(100 + Math.random() * 900)}`,
+          members: [{ id: teacherId, name: user.name, role: 'owner', email: user.email || 'user@school.edu' }],
+          boards: []
+        };
         const newTeacherObj = {
           id: teacherId,
-          name: user.name.endsWith('T') ? user.name : `${user.name}T`,
+          name: teacherName,
           role: '교사',
           color: '#3b82f6',
-          classrooms: [
-            {
-              id: `cls-${Date.now()}`,
-              name: `${user.name} 선생님의 첫 번째 교실`,
-              grade: '일반',
-              code: `CLS-${Math.floor(100 + Math.random() * 900)}`,
-              members: [{ id: teacherId, name: user.name, role: 'owner', email: user.email || 'user@school.edu' }],
-              boards: []
-            }
-          ]
+          classrooms: [firstClassroom]
         };
         setTeachers((prev) => [...prev, newTeacherObj]);
+        // Firestore에도 즉시 저장 (다른 기기/관리자 세션에서도 바로 보이도록)
+        saveClassroomToFirestore(firstClassroom);
+        if (!user.refId) {
+          updateUserInFirestore(user.id, { refId: teacherId });
+        }
       }
     } else {
       // 3) 학생이면 students 목록에 등록

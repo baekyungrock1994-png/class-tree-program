@@ -1,16 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Clock, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Lock, 
-  Unlock, 
-  ShieldAlert, 
-  Users, 
-  QrCode, 
-  CheckCircle2, 
-  AlertTriangle
+import { useState, useEffect, useRef } from 'react';
+import {
+  Clock,
+  Play,
+  Pause,
+  RotateCcw,
+  Lock,
+  Unlock,
+  ShieldAlert,
+  Users,
+  QrCode
 } from 'lucide-react';
 
 export default function TimerControl({

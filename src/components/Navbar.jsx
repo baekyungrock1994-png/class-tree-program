@@ -1,11 +1,9 @@
-import React from 'react';
-import { 
-  GitFork, 
-  LogIn, 
-  LogOut, 
-  User, 
-  GraduationCap, 
-  School, 
+import {
+  GitFork,
+  LogIn,
+  LogOut,
+  GraduationCap,
+  School,
   ShieldCheck,
   UserPlus
 } from 'lucide-react';

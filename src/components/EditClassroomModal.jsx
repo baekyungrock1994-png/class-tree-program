@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  School, 
-  X, 
-  KeyRound, 
-  RefreshCw, 
-  Check, 
-  Sparkles, 
-  Pencil,
-  BookOpen
+import { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  KeyRound,
+  RefreshCw,
+  Check,
+  Pencil
 } from 'lucide-react';
 
 const GRADE_PRESETS = ['1학년', '2학년', '3학년', '4학년', '5학년', '6학년', '동아리', '방과후', '공통'];

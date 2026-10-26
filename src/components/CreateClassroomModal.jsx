@@ -1,14 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { 
-  School, 
-  X, 
-  KeyRound, 
-  RefreshCw, 
-  Check, 
-  Sparkles, 
-  ShieldCheck, 
-  Plus,
-  BookOpen
+import { useState, useRef } from 'react';
+import {
+  School,
+  X,
+  KeyRound,
+  RefreshCw,
+  ShieldCheck,
+  Plus
 } from 'lucide-react';
 
 const SCHOOL_LEVEL_PRESETS = {

@@ -1,16 +1,14 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  getDocs, 
-  updateDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  query, 
-  where, 
-  orderBy,
-  serverTimestamp 
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  onSnapshot,
+  query,
+  where,
+  serverTimestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
@@ -262,6 +260,21 @@ export async function saveClassroomToFirestore(classroom) {
     return true;
   } catch (error) {
     console.warn('[Firebase] saveClassroomToFirestore 실패:', error.message);
+    return false;
+  }
+}
+
+/**
+ * 13-1. 학급(교실) 삭제
+ */
+export async function deleteClassroomFromFirestore(classroomId) {
+  try {
+    if (!classroomId) return false;
+    const classRef = doc(db, 'classrooms', classroomId);
+    await deleteDoc(classRef);
+    return true;
+  } catch (error) {
+    console.warn('[Firebase] deleteClassroomFromFirestore 실패:', error.message);
     return false;
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, School, BookOpen, MessageSquare, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Plus, MessageSquare, ChevronLeft, ChevronRight, User } from 'lucide-react';
 
 export default function TeacherSidebar({
   teachers = [],

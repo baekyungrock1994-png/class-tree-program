@@ -1,17 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Plus, 
-  X, 
-  Compass, 
-  Grid, 
-  Layers, 
-  BookOpen, 
-  Sparkles,
+import { useState, useEffect, useRef } from 'react';
+import {
+  Plus,
+  X,
+  Compass,
+  Grid,
+  Layers,
   Check,
   Copy,
-  School,
-  CheckCircle2,
-  FileText
+  CheckCircle2
 } from 'lucide-react';
 
 export default function CreateBoardModal({

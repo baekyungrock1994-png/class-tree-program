@@ -1,15 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { 
-  GitFork, 
-  X, 
-  Lock, 
-  User, 
-  KeyRound, 
-  GraduationCap, 
-  School, 
-  ShieldCheck, 
+import { useState, useRef } from 'react';
+import {
+  GitFork,
+  X,
+  Lock,
+  User,
   ArrowRight,
-  Sparkles,
   AlertCircle
 } from 'lucide-react';
 import { signInWithGoogle } from '../services/firebaseAuthService';

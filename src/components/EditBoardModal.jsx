@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Compass, 
-  Grid, 
-  Pencil, 
-  Check, 
-  BookOpen, 
-  Sparkles 
+import { useState, useEffect, useRef } from 'react';
+import {
+  X,
+  Compass,
+  Grid,
+  Pencil,
+  Check
 } from 'lucide-react';
 
 export default function EditBoardModal({

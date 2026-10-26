@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX, X, Sparkles, Clock, CheckCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Volume2, VolumeX, X, Sparkles, CheckCircle } from 'lucide-react';
 
 /**
  * Web Audio API를 활용한 경쾌하고 주목도 높은 팡파레 사운드
