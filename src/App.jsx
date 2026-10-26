@@ -138,8 +138,9 @@ export default function App() {
     return getZoomOriginStyle(null, workspaceRef.current);
   })();
 
-  // 현재 로그인된 기본 교사 계정 ID (김길동T) - 교사는 본인 교실만 수정 가능, 관리자는 모든 교사의 교실/수업 수정 가능
-  const loggedInTeacherId = 'tch-1';
+  // 현재 로그인된 교사 계정 ID - 교사는 본인 교실만 수정 가능, 관리자는 모든 교사의 교실/수업 수정 가능
+  // (로그인 시 handleLoginSuccess에서 실제 로그인한 교사의 id로 설정됨)
+  const [loggedInTeacherId, setLoggedInTeacherId] = useState(null);
 
   // 관리자 콘솔용 전체 가입 사용자 (교사 & 학생) 상태
   const [users, setUsers] = useState(() => {
@@ -1046,6 +1047,7 @@ export default function App() {
         setTeachers((prev) => [...prev, matchedTeacher]);
       }
       setActiveTeacherId(matchedTeacher.id);
+      setLoggedInTeacherId(matchedTeacher.id);
       setCurrentClassroom(matchedTeacher.classrooms?.[0] || null);
       setViewLevel('classrooms');
       setDisplayedLevel('classrooms');
@@ -1070,9 +1072,9 @@ export default function App() {
     }
     setIsLoggedIn(false);
     setCurrentUser(null);
+    setLoggedInTeacherId(null);
     setSelectedStudentClassroomId(null);
     setCurrentBoard(null);
-    setCurrentNode(null);
     setIsStudentAdminOpen(false);
     setDisplayedLevel('classrooms');
     setViewLevel('classrooms');

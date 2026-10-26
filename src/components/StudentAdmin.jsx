@@ -433,9 +433,15 @@ export default function StudentAdmin({
       username: newUserUsername.trim(),
       password: newUserPassword || '1234',
       role: newUserRole,
-      grade: newUserRole === 'student' ? Number(newUserGrade) : undefined,
-      classNum: newUserRole === 'student' ? Number(newUserClassNum) : undefined,
-      studentNo: newUserRole === 'student' ? `${newUserGrade}0${newUserClassNum}99` : undefined,
+      // Firestore setDoc()은 필드 값이 undefined면 저장 자체가 실패하므로,
+      // 교사 등록 시에는 학생 전용 필드를 아예 포함하지 않는다.
+      ...(newUserRole === 'student'
+        ? {
+            grade: Number(newUserGrade),
+            classNum: Number(newUserClassNum),
+            studentNo: `${newUserGrade}0${newUserClassNum}99`
+          }
+        : {}),
       email: `${newUserUsername.trim()}@school.edu`,
       detail: newUserDetail.trim() || (newUserRole === 'teacher' ? '교사' : `${newUserGrade}학년 ${newUserClassNum}반 신입생`),
       joinedDate: '오늘 등록',

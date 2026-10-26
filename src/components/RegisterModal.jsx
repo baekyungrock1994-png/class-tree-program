@@ -130,13 +130,17 @@ export default function RegisterModal({
       username: cleanUsername,
       password: cleanPw,
       role,
-      schoolLevel: role === 'student' ? schoolType : undefined,
-      school: role === 'student' ? schoolType : undefined,
-      grade: role === 'student' ? Number(studentGrade) : undefined,
-      classNum: role === 'student' ? (Number(studentClass) || 1) : undefined,
-      studentNo: role === 'student' 
-        ? `${studentGrade}0${studentClass || 1}99`
-        : undefined,
+      // Firestore setDoc()은 필드 값이 undefined면 저장 자체가 실패하므로,
+      // 교사 가입 시에는 학생 전용 필드를 아예 포함하지 않는다.
+      ...(role === 'student'
+        ? {
+            schoolLevel: schoolType,
+            school: schoolType,
+            grade: Number(studentGrade),
+            classNum: Number(studentClass) || 1,
+            studentNo: `${studentGrade}0${studentClass || 1}99`
+          }
+        : {}),
       detail: role === 'teacher'
         ? '교사'
         : `${schoolType} ${studentGrade}학년 ${studentClass || 1}반`,

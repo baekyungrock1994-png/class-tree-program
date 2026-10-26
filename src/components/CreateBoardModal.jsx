@@ -5,6 +5,7 @@ import {
   Compass,
   Grid,
   Layers,
+  BookOpen,
   Check,
   Copy,
   CheckCircle2

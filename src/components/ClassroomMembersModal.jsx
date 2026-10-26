@@ -105,7 +105,7 @@ export default function ClassroomMembersModal({
       name: newMemberName.trim(),
       username: newMemberUsername.trim(),
       role: newMemberRole,
-      studentNo: newMemberRole === 'student' ? '10199' : undefined,
+      ...(newMemberRole === 'student' ? { studentNo: '10199' } : {}),
       email: `${newMemberUsername.trim()}@school.edu`
     };
 
